@@ -1,6 +1,8 @@
 // Orders.jsx
 import React, { useEffect, useState } from "react";
+import { toast } from 'react-toastify';
 import { useAppContext } from "../context/AppContext";
+
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
@@ -12,16 +14,28 @@ export default function Orders() {
     hasPrevPage: false,
   });
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
   const { axios, navigate } = useAppContext();
 
   const fetchOrders = async (page = 1, searchQuery = "") => {
     try {
-      const { data } = await axios.get("/api/orders");
-      setOrders(data);
+      setLoading(true);
+      const { data } = await axios.get("/api/orders", {
+        params: { page, search: searchQuery },
+      });
+
+      setOrders(data.orders || []); // API se jo array aa raha hai
+      setPagination(data.pagination || {});
+      
+      // Show success toast when orders are loaded
+      // if (data.orders && data.orders.length > 0) {
+        // toast.success(`Loaded ${data.orders.length} orders successfully!`);
+      // }
     } catch (err) {
       console.error("Failed to fetch orders:", err);
-      console.error('Error details:', err.response?.data || err.message);
-      setOrders([]);
+      toast.error('Failed to load orders');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -34,10 +48,19 @@ export default function Orders() {
   }, []);
 
   // jab search kare to page 1 se reload ho
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     const value = e.target.value;
     setSearch(value);
-    fetchOrders(1, value);
+    try {
+      const { data } = await axios.get("/api/orders", {
+        params: { page: 1, search: value },
+      });
+      setOrders(data.orders || []);
+      setPagination(data.pagination || {});
+    } catch (err) {
+      console.error("Failed to fetch orders:", err);
+      toast.error('Failed to load orders');
+    }
   };
 
   // pagination click
@@ -45,42 +68,47 @@ export default function Orders() {
     fetchOrders(pageNumber, search);
   };
 
+ 
+
   return (
-    <div className="p-6">
-      <div className="flex justify-between mb-4 items-center">
-        <h1 className="text-2xl font-bold">Orders</h1>
-        <div className="flex gap-3">
-          <input
-            type="text"
-            placeholder="Search orders..."
-            value={search}
-            onChange={handleSearch}
-            className="border px-3 py-2 rounded"
-          />
-          <button
-            onClick={() => navigate("/orders/create")}
-            className="bg-blue-600 text-white px-4 py-2 rounded"
-          >
-            + Create Order
-          </button>
-        </div>
+    <div className="max-w-7xl mx-auto py-8 px-4">
+      <h3 className="text-3xl font-bold mb-8 text-center text-indigo-700">Orders List</h3>
+      
+      {/* Search Bar */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Search orders..."
+          value={search}
+          onChange={handleSearch}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+      </div>
+      
+      <div className="flex justify-between mb-6">
+        <div></div>
+        <button
+          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+          onClick={() => navigate("/orders/create")}
+        >
+          Create Order
+        </button>
       </div>
 
-      {/* Orders Table */}
-      <div className="bg-white shadow rounded overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-100 text-left">
-              <th className="p-3">Order #</th>
-              <th className="p-3">Customer</th>
-              <th className="p-3">Phone</th>
-              <th className="p-3">Total Bill</th>
-              <th className="p-3">Invoice</th>
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order #</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Bill</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-white divide-y divide-gray-200">
             {orders.map((o) => (
-              <tr key={o._id} className="border-t hover:bg-gray-50">
+              <tr key={o._id} className="hover:bg-gray-50">
                 <td className="p-3 font-semibold">{o.orderNumber}</td>
                 <td className="p-3">{o.customerName}</td>
                 <td className="p-3">{o.customerPhone}</td>

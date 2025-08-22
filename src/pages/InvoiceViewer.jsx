@@ -18,9 +18,6 @@ function formatIST(dateString) {
     year: "numeric",
     month: "short",
     day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
   });
 }
 
@@ -53,48 +50,32 @@ export default function InvoiceViewer() {
       win.document.write(`
         <html>
           <head>
-            <title>Medical Invoice</title>
+            <title>Hospital Invoice</title>
             <style>
-              body { font-family: Arial, sans-serif; padding: 20px; margin: 0; color: #000; }
-              .text-center { text-align: center; }
-              .border-b-2 { border-bottom: 2px solid #2563eb; }
-              .pb-6 { padding-bottom: 24px; }
-              .mb-6 { margin-bottom: 24px; }
-              .text-2xl { font-size: 24px; }
-              .text-3xl { font-size: 30px; }
-              .font-bold { font-weight: bold; }
-              .text-blue-600 { color: #2563eb; }
-              .text-sm { font-size: 14px; }
-              .text-xs { font-size: 12px; }
-              .text-gray-600 { color: #666; }
-              .text-gray-500 { color: #999; }
-              .grid { display: grid; }
-              .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
-              .gap-6 { gap: 24px; }
-              .font-semibold { font-weight: 600; }
-              .text-gray-800 { color: #333; }
-              .mb-3 { margin-bottom: 12px; }
-              .space-y-1 > * + * { margin-top: 4px; }
-              .font-medium { font-weight: 500; }
-              table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background: #f8fafc; font-weight: 600; text-transform: uppercase; font-size: 12px; }
-              .text-right { text-align: right; }
-              .text-center { text-align: center; }
-              .border-t { border-top: 1px solid #ddd; }
-              .pt-4 { padding-top: 16px; }
-              .w-80 { width: 320px; }
-              .space-y-2 > * + * { margin-top: 8px; }
-              .text-red-600 { color: #dc2626; }
-              .text-lg { font-size: 18px; }
-              .pt-2 { padding-top: 8px; }
-              .mt-8 { margin-top: 32px; }
-              .pt-6 { padding-top: 24px; }
-              .mt-1 { margin-top: 4px; }
-              .flex { display: flex; }
-              .justify-between { justify-content: space-between; }
-              .flex-col { flex-direction: column; }
-              .items-end { align-items: flex-end; }
+              body { font-family: Arial, sans-serif; padding: 20px; margin: 0; color: #000; background: white; }
+              .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; }
+              .logo { font-size: 48px; font-weight: bold; color: #2563eb; }
+              .invoice-title { text-align: right; }
+              .invoice-title h1 { font-size: 24px; margin: 0; color: #333; }
+              .invoice-details { text-align: right; font-size: 12px; color: #666; margin-top: 10px; }
+              .company-info { display: flex; justify-content: space-between; margin: 30px 0; }
+              .from-section, .bill-to-section { flex: 1; margin-right: 20px; }
+              .section-title { font-weight: bold; color: #333; margin-bottom: 10px; }
+              .company-name { font-weight: bold; color: #333; }
+              .items-table { width: 100%; border-collapse: collapse; margin: 30px 0; }
+              .items-table th { background: #2563eb; color: white; padding: 12px; text-align: left; font-size: 12px; }
+              .items-table td { padding: 12px; border-bottom: 1px solid #eee; }
+              .items-table .text-right { text-align: right; }
+              .items-table .text-center { text-align: center; }
+              .totals-section { margin-top: 30px; display: flex; justify-content: space-between; }
+              .payment-info { flex: 1; margin-right: 40px; }
+              .totals { flex: 1; max-width: 300px; }
+              .total-row { display: flex; justify-content: space-between; margin: 5px 0; }
+              .total-row.final { font-weight: bold; font-size: 16px; border-top: 1px solid #333; padding-top: 10px; margin-top: 10px; }
+              .notes { margin-top: 30px; }
+              .signature { text-align: right; margin-top: 50px; }
+              .signature-line { border-bottom: 1px solid #333; width: 200px; margin-left: auto; margin-bottom: 5px; }
+              .qr-code { width: 80px; height: 80px; background: #000; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; margin-top: 8px; }
             </style>
           </head>
           <body>${printContents}</body>
@@ -114,14 +95,40 @@ export default function InvoiceViewer() {
         <html>
           <head>
             <meta charset="utf-8" />
-            <title>Medical Invoice</title>
+            <title>Hospital Invoice</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; margin: 0; color: #000; background: white; }
+              .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; }
+              .logo { font-size: 48px; font-weight: bold; color: #2563eb; }
+              .invoice-title { text-align: right; }
+              .invoice-title h1 { font-size: 24px; margin: 0; color: #333; }
+              .invoice-details { text-align: right; font-size: 12px; color: #666; margin-top: 10px; }
+              .company-info { display: flex; justify-content: space-between; margin: 30px 0; }
+              .from-section, .bill-to-section { flex: 1; margin-right: 20px; }
+              .section-title { font-weight: bold; color: #333; margin-bottom: 10px; }
+              .company-name { font-weight: bold; color: #333; }
+              .items-table { width: 100%; border-collapse: collapse; margin: 30px 0; }
+              .items-table th { background: #2563eb; color: white; padding: 12px; text-align: left; font-size: 12px; }
+              .items-table td { padding: 12px; border-bottom: 1px solid #eee; }
+              .items-table .text-right { text-align: right; }
+              .items-table .text-center { text-align: center; }
+              .totals-section { margin-top: 30px; display: flex; justify-content: space-between; }
+              .payment-info { flex: 1; margin-right: 40px; }
+              .totals { flex: 1; max-width: 300px; }
+              .total-row { display: flex; justify-content: space-between; margin: 5px 0; }
+              .total-row.final { font-weight: bold; font-size: 16px; border-top: 1px solid #333; padding-top: 10px; margin-top: 10px; }
+              .notes { margin-top: 30px; }
+              .signature { text-align: right; margin-top: 50px; }
+              .signature-line { border-bottom: 1px solid #333; width: 200px; margin-left: auto; margin-bottom: 5px; }
+              .qr-code { width: 80px; height: 80px; background: #000; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; margin-top: 8px; }
+            </style>
           </head>
           <body>${printRef.current.innerHTML}</body>
         </html>
       `;
       const blob = new Blob([html], { type: "text/html" });
       element.href = URL.createObjectURL(blob);
-      element.download = `medical-invoice-${invoice.invoiceNumber || orderId}.html`;
+      element.download = `hospital-invoice-${invoice.invoiceNumber || orderId}.html`;
       document.body.appendChild(element);
       element.click();
       document.body.removeChild(element);
@@ -130,8 +137,8 @@ export default function InvoiceViewer() {
 
   const handleSend = () => {
     if (!invoice) return;
-    const subject = `Medical Invoice #${invoice.invoiceNumber}`;
-    let body = `Medical Invoice%0D%0A%0D%0AInvoice Number: ${invoice.invoiceNumber}%0D%0APatient: ${invoice.customerName}%0D%0APhone: ${invoice.customerPhone}%0D%0ADate: ${formatIST(invoice.date)}%0D%0A%0D%0APrescribed Items:%0D%0A`;
+    const subject = `Hospital Invoice #${invoice.invoiceNumber}`;
+    let body = `Hospital Invoice%0D%0A%0D%0AInvoice Number: ${invoice.invoiceNumber}%0D%0APatient: ${invoice.customerName}%0D%0APhone: ${invoice.customerPhone}%0D%0ADate: ${formatIST(invoice.date)}%0D%0A%0D%0APrescribed Items:%0D%0A`;
     invoice.items?.forEach((item, idx) => {
       body += `${idx + 1}. ${item.itemName} x${item.quantity} @ ₹${item.unitPrice} = ₹${item.totalPrice}%0D%0A`;
     });
@@ -160,98 +167,123 @@ export default function InvoiceViewer() {
 
         {/* Invoice */}
         <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-          <div ref={printRef} className="p-6 sm:p-8">
-            {/* Header */}
-            <div className="text-center border-b-2 border-blue-600 pb-6 mb-6">
-              <h1 className="text-2xl sm:text-3xl font-bold text-blue-600 mb-2">MEDICAL CLINIC</h1>
-              <p className="text-sm text-gray-600">📍 123 Health Street, Medical District</p>
-              <p className="text-sm text-gray-600">📞 +91-9876543210 | 📧 clinic@medical.com</p>
-              <p className="text-xs text-gray-500 mt-2">Reg. No: MED12345 | License: DL-2024-001</p>
-            </div>
-
-            {/* Invoice Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-3">📋 Invoice Details</h3>
-                <div className="space-y-1 text-sm">
-                  <p><span className="font-medium">Invoice #:</span> {invoice.invoiceNumber}</p>
-                  <p><span className="font-medium">Order #:</span> {invoice.orderNumber}</p>
-                  <p><span className="font-medium">Date:</span> {formatIST(invoice.date)}</p>
+          <div ref={printRef} className="p-8">
+          {/* Header */}
+<div className="invoice-header flex justify-between items-start mb-8">
+  <div className="logo text-5xl font-bold text-blue-600">SA</div>
+  <div className="invoice-title text-right">
+    <h1 className="text-2xl font-bold text-gray-800 mb-2">Hospital Invoice</h1>
+    
+    <div className="invoice-details text-sm text-gray-600 mt-4">
+      <div>Invoice no.: {invoice.invoiceNumber}</div>
+      <div>Invoice date: {formatIST(invoice.date)}</div>
+      <div>Due: {formatIST(invoice.date)}</div>
+    </div>
+  </div>
+</div>
+{/* Company Info */}
+            <div className="company-info flex justify-between mb-8">
+              <div className="from-section flex-1 mr-8">
+                <div className="company-name font-bold text-gray-800">Surya Medical And Optical</div>
+                <div className="text-sm text-gray-600">
+                  <div>Dr. Chaturvedi</div>
+                  <div>suryamedical.com</div>
+                  <div>9234679597</div>
                 </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-3">👤 Patient Information</h3>
-                <div className="space-y-1 text-sm">
-                  <p><span className="font-medium">Name:</span> {invoice.customerName}</p>
-                  <p><span className="font-medium">Phone:</span> {invoice.customerPhone}</p>
+              
+              <div className="bill-to-section ml-auto">
+                <div className="section-title font-bold text-gray-800 mb-2">Bill to</div>
+                <div className="company-name font-bold text-gray-800">{invoice.customerName}</div>
+                <div className="text-sm text-gray-600">
+                  <div>{invoice.customerPhone}</div>
                 </div>
               </div>
             </div>
-
             {/* Items Table */}
-            <div className="mb-6">
-              <h3 className="font-semibold text-gray-800 mb-3">💊 Prescribed Items</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full border border-gray-300">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="p-3 text-left text-xs font-medium text-gray-700 uppercase">#</th>
-                      <th className="p-3 text-left text-xs font-medium text-gray-700 uppercase">Item Name</th>
-                      <th className="p-3 text-left text-xs font-medium text-gray-700 uppercase hidden sm:table-cell">Category</th>
-                      <th className="p-3 text-center text-xs font-medium text-gray-700 uppercase">Qty</th>
-                      <th className="p-3 text-right text-xs font-medium text-gray-700 uppercase">Rate</th>
-                      <th className="p-3 text-right text-xs font-medium text-gray-700 uppercase">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {invoice.items?.map((item, idx) => (
-                      <tr key={idx} className="border-b">
-                        <td className="p-3 text-sm">{idx + 1}</td>
-                        <td className="p-3 text-sm font-medium">{item.itemName}</td>
-                        {/* ✅ Category mapped: handles 1/"1" and 2/"2" */}
-                        <td className="p-3 text-sm text-gray-600 hidden sm:table-cell">
-                          {categoryMap[item.category] ||
-                           categoryMap[Number(item.category)] ||
-                           item.category || "-"}
-                        </td>
-                        <td className="p-3 text-sm text-center">{item.quantity}</td>
-                        <td className="p-3 text-sm text-right">₹{item.unitPrice}</td>
-                        <td className="p-3 text-sm text-right font-medium">₹{item.totalPrice}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <table className="items-table w-full border-collapse mb-8">
+              <thead>
+                <tr className="bg-blue-600 text-white">
+                  <th className="p-3 text-left text-xs uppercase">Description</th>
+                  <th className="p-3 text-center text-xs uppercase">Rate</th>
+                  <th className="p-3 text-center text-xs uppercase">QTY</th>
+                  <th className="p-3 text-center text-xs uppercase">Tax</th>
+                  <th className="p-3 text-center text-xs uppercase">Discount</th>
+                  <th className="p-3 text-right text-xs uppercase">Amount (INR)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoice.items?.map((item, idx) => (
+                  <tr key={idx}>
+                    <td className="p-3">
+                      <div className="font-medium">{item.itemName}</div>
+                      <div className="text-sm text-gray-600">
+                        {categoryMap[item.category] || categoryMap[Number(item.category)] || item.category || "Medical Item"}
+                      </div>
+                    </td>
+                    <td className="p-3 text-center">₹{item.unitPrice}</td>
+                    <td className="p-3 text-center">{item.quantity}</td>
+<td className="p-3 text-center">{invoice.taxPercentage || invoice.tax || 0}%</td>
+<td className="p-3 text-center">{invoice.discountpercentage || invoice.discount || 0}%</td>
 
-            {/* Totals */}
-            <div className="border-t pt-4">
-              <div className="flex flex-col sm:items-end">
-                <div className="w-full sm:w-80 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Subtotal:</span>
-                    <span>₹{invoice.subtotal ?? "N/A"}</span>
+                    <td className="p-3 text-right font-medium">₹{Number(invoice.grandTotal || invoice.total || invoice.totalAmount || 0).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Totals Section */}
+            <div className="totals-section flex justify-between">
+              <div className="payment-info flex-1 mr-10">
+                <div className="section-title font-bold text-gray-800 mb-2">Payment instruction</div>
+                <div className="text-sm text-gray-600 mb-4">
+                  <div>Scan QR Code for Payment</div>
+                  <div className="mt-2 p-4 border border-gray-300 inline-block">
+                    <div className="w-20 h-20 bg-black text-white flex items-center justify-center text-xs">
+                      QR CODE
+                    </div>
                   </div>
-                  <div className="flex justify-between text-sm text-red-600">
-                    <span>Discount ({invoice.discount}%):</span>
-                    <span>-₹{invoice.discountAmount ?? "N/A"}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Tax ({invoice.tax}%):</span>
-                    <span>₹{invoice.totalAmount ?? "N/A"}</span>
-                  </div>
-                  <div className="flex justify-between text-lg font-bold border-t pt-2">
-                    <span>Grand Total:</span>
-                    <span className="text-blue-600">₹{invoice.grandTotal || invoice.total || invoice.totalAmount || "N/A"}</span>
-                  </div>
+                </div>
+                <div className="text-sm text-gray-600">
+                  <div>UPI ID: suryaapps@paytm</div>
+                  <div>Account: 1234567890</div>
+                  <div>Branch:HDFC Bank</div>
+                  <div>IFSC CODE:HDFC0001678</div>
+                </div>
+              </div>
+
+              <div className="totals flex-1 max-w-xs">
+                <div className="total-row flex justify-between text-sm">
+                  <span>Subtotal:</span>
+                  <span>₹{Number(invoice.subtotal || 0).toFixed(2)}</span>
+                </div>
+                <div className="total-row flex justify-between text-sm">
+                  <span>Discount ({invoice.discountpercentage||invoice.discount }%):</span>
+                  <span>₹{Number(invoice.discountAmount || 0).toFixed(2)}</span>
+                </div>
+                <div className="total-row flex justify-between text-sm">
+                  <span>Tax:</span>
+                  <span>₹{Number(invoice.taxAmount || 0).toFixed(2)}</span>
+                </div>
+                <div className="total-row final flex justify-between font-bold text-lg border-t pt-2 mt-2">
+                  <span>Grand Total</span>
+                  <span>₹{Number(invoice.grandTotal || invoice.total || invoice.totalAmount || 0).toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="mt-8 pt-6 border-t text-center text-xs text-gray-500">
-              <p>Thank you for choosing our medical services!</p>
-              <p className="mt-1">For any queries, please contact us at the above details.</p>
+            {/* Notes */}
+            <div className="notes mt-8">
+              <div className="section-title font-bold text-gray-800 mb-2">Notes</div>
+              <div className="text-sm text-gray-600">
+                Thank you for choosing our medical services. For any queries, please contact us at the above details.
+              </div>
+            </div>
+
+            {/* Signature */}
+            <div className="signature text-right mt-12">
+              <div className="signature-line border-b border-gray-400 w-48 ml-auto mb-2"></div>
+              <div className="text-sm text-gray-600">Authorized Signature</div>
             </div>
           </div>
         </div>
