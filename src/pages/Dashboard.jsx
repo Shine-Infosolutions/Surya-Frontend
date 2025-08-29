@@ -35,84 +35,138 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [showCategory, setShowCategory] = useState('both'); // 'medical', 'optical', 'both'
 
   useEffect(() => {
     fetchDashboardData();
-  }, [selectedYear]);
+  }, [selectedYear, showCategory]);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       
-      // Fetch orders and items in parallel for better performance
-      const [ordersRes, itemsRes] = await Promise.all([
-        axios.get('/api/orders', { params: { page: 1, limit: 100 } }),
-        axios.get('/api/item', { params: { page: 1, limit: 1000 } })
+      // Fetch items and orders data with proper pagination
+      const [itemsResponse, ordersResponse] = await Promise.all([
+        axios.get('/api/items', { params: { limit: 1000 } }),
+        axios.get('/api/orders', { params: { limit: 1000 } })
       ]);
       
-      const orders = ordersRes.data.orders || [];
-      const ordersPagination = ordersRes.data.pagination || {};
-      const totalOrdersFromPagination = ordersPagination.totalOrders || orders.length;
+      // Get items data - handle different response structures
+      const itemsData = itemsResponse.data;
+      let allItems = [];
       
-      console.log('Orders fetched:', orders.length, 'Total orders:', totalOrdersFromPagination);
+      if (Array.isArray(itemsData)) {
+        allItems = itemsData;
+      } else if (itemsData.data && Array.isArray(itemsData.data)) {
+        allItems = itemsData.data;
+      } else if (itemsData.items && Array.isArray(itemsData.items)) {
+        allItems = itemsData.items;
+      }
       
-      const items = itemsRes.data.items || itemsRes.data || [];
-      console.log('Dashboard items:', items.length);
+      console.log('Items API Response:', itemsData);
+      console.log('All Items:', allItems);
       
-      // Calculate metrics
-      const totalOrders = totalOrdersFromPagination;
-      // Use sample revenue calculation for performance
-      const avgOrderValue = orders.length > 0 ? orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0) / orders.length : 0;
-      const totalRevenue = avgOrderValue * totalOrdersFromPagination;
-      console.log('Total revenue estimated:', totalRevenue);
-      const noStockItems = items.filter(item => item.stock === 0).length;
-      const totalItems = items.length;
+      // Filter items based on selected category
+      let filteredItems = allItems;
+      if (showCategory === 'medical') {
+        filteredItems = allItems.filter(item => Number(item.category) === 1);
+      } else if (showCategory === 'optical') {
+        filteredItems = allItems.filter(item => Number(item.category) === 2);
+      }
       
-      // Generate stock levels by category
-      const medicalItems = items.filter(item => item.category === 1);
-      const opticalItems = items.filter(item => item.category === 2);
-      const stockLevels = [
-        medicalItems.reduce((sum, item) => sum + item.stock, 0),
-        opticalItems.reduce((sum, item) => sum + item.stock, 0)
-      ];
+      const totalItems = filteredItems.length;
+      const noStockItems = filteredItems.filter(item => (item.stock || 0) === 0).length;
       
-      // Generate sample monthly sales for selected year
-      const monthlySales = Array(12).fill(0);
-      orders.forEach(order => {
+      // Get orders data - API returns data in 'data' array
+      const ordersData = ordersResponse.data;
+      const allOrders = ordersData.data || [];
+      
+      console.log('Orders API Response:', ordersData);
+      console.log('All Orders:', allOrders);
+      console.log('Orders count:', allOrders.length);
+      
+      // Filter orders based on selected category
+      let filteredOrders = allOrders;
+      if (showCategory === 'medical') {
+        filteredOrders = allOrders.filter(order => 
+          order.items && order.items.some(item => String(item.category) === '1')
+        );
+      } else if (showCategory === 'optical') {
+        filteredOrders = allOrders.filter(order => 
+          order.items && order.items.some(item => String(item.category) === '2')
+        );
+      }
+      
+      const totalRevenue = filteredOrders.reduce((sum, order) => {
+        const amount = Number(order.totalAmount) || 0;
+        return sum + amount;
+      }, 0);
+      const totalOrders = filteredOrders.length;
+      
+      console.log('Category filter:', showCategory);
+      console.log('Filtered orders:', filteredOrders.length);
+      console.log('Sample order items:', filteredOrders[0]?.items);
+      
+      // Calculate monthly sales for current year
+      const currentYear = selectedYear;
+      const monthlySales = new Array(12).fill(0);
+      const yearlyRevenue = new Array(5).fill(0);
+      
+      filteredOrders.forEach(order => {
+        if (!order.createdAt) return;
+        
         const orderDate = new Date(order.createdAt);
-        if (orderDate.getFullYear() === selectedYear) {
-          const monthIndex = orderDate.getMonth();
-          monthlySales[monthIndex] += order.items?.length || 1;
+        if (isNaN(orderDate.getTime())) return; // Invalid date
+        
+        const orderYear = orderDate.getFullYear();
+        const orderMonth = orderDate.getMonth();
+        
+        // Monthly sales for selected year (count orders, not units)
+        if (orderYear === currentYear) {
+          monthlySales[orderMonth] += 1; // Count orders instead of units
+        }
+        
+        // Yearly revenue for last 5 years
+        const currentYearNow = new Date().getFullYear();
+        const yearIndex = orderYear - (currentYearNow - 4);
+        if (yearIndex >= 0 && yearIndex < 5) {
+          const revenue = Number(order.totalAmount) || 0;
+          yearlyRevenue[yearIndex] += revenue;
         }
       });
       
-      // Generate yearly revenue from actual order data
-      const currentYear = new Date().getFullYear();
-      const yearlyRevenue = Array(5).fill(0);
-      const years = [currentYear - 4, currentYear - 3, currentYear - 2, currentYear - 1, currentYear];
-      
-      orders.forEach(order => {
-        const orderYear = new Date(order.createdAt).getFullYear();
-        const yearIndex = years.indexOf(orderYear);
-        if (yearIndex !== -1) {
-          yearlyRevenue[yearIndex] += order.totalAmount || 0;
-        }
-      });
-      
-      console.log('Yearly revenue by year:', years.map((year, i) => `${year}: ₹${yearlyRevenue[i]}`));
+      console.log('Dashboard data calculated:');
+      console.log('Total items:', totalItems);
+      console.log('No stock items:', noStockItems);
+      console.log('Total orders:', totalOrders);
+      console.log('Total revenue:', totalRevenue);
+      console.log('Monthly sales:', monthlySales);
+      console.log('Yearly revenue:', yearlyRevenue);
+      console.log('Filtered items:', filteredItems.length);
+      console.log('Filtered orders:', filteredOrders.length);
       
       setDashboardData({
-        monthlySales,
-        yearlyRevenue,
-        stockLevels,
-        totalOrders,
-        totalRevenue,
-        noStockItems,
-        totalItems
+        monthlySales: monthlySales,
+        yearlyRevenue: yearlyRevenue,
+        stockLevels: [],
+        totalOrders: totalOrders,
+        totalRevenue: totalRevenue,
+        noStockItems: noStockItems,
+        totalItems: totalItems
       });
       
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      // Fallback to empty data on error
+      setDashboardData({
+        monthlySales: new Array(12).fill(0),
+        yearlyRevenue: new Array(5).fill(0),
+        stockLevels: [],
+        totalOrders: 0,
+        totalRevenue: 0,
+        noStockItems: 0,
+        totalItems: 0
+      });
     } finally {
       setLoading(false);
     }
@@ -181,6 +235,44 @@ const Dashboard = () => {
     <div className="p-6 space-y-6">
       <h2 className="text-3xl font-bold text-gray-800">Dashboard</h2>
       
+      {/* Category Toggle */}
+      <div className="flex justify-center mb-6">
+        <div className="bg-white rounded-lg p-1 shadow-lg">
+          <div className="flex">
+            <button
+              onClick={() => setShowCategory('both')}
+              className={`px-4 py-2 rounded-md transition-colors ${
+                showCategory === 'both'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:text-blue-600'
+              }`}
+            >
+              Both
+            </button>
+            <button
+              onClick={() => setShowCategory('medical')}
+              className={`px-4 py-2 rounded-md transition-colors ${
+                showCategory === 'medical'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:text-blue-600'
+              }`}
+            >
+              🏥 Surya Medical
+            </button>
+            <button
+              onClick={() => setShowCategory('optical')}
+              className={`px-4 py-2 rounded-md transition-colors ${
+                showCategory === 'optical'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:text-blue-600'
+              }`}
+            >
+              👓 Surya Optical
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <StatCard 
@@ -213,7 +305,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-lg">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Monthly Sales (Units)</h3>
+            <h3 className="text-lg font-semibold">Monthly Orders</h3>
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
@@ -227,7 +319,7 @@ const Dashboard = () => {
           <Bar data={{
             labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
             datasets: [{
-              label: `Monthly Sales (${selectedYear})`,
+              label: `Monthly Orders (${selectedYear})`,
               data: dashboardData.monthlySales,
               backgroundColor: 'rgba(59, 130, 246, 0.8)',
               borderColor: 'rgba(59, 130, 246, 1)',

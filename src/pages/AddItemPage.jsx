@@ -8,18 +8,9 @@ function AddItemPage() {
   const handleItemAdded = () => {
     navigate('/items');
   };
-
+   
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4">
-      <div className="flex items-center mb-8">
-        <button 
-          onClick={() => navigate('/items')}
-          className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 mr-4"
-        >
-          ← Back to Items
-        </button>
-        <h3 className="text-3xl font-bold text-indigo-700">Add New Item</h3>
-      </div>
+    <div className="w-full h-screen overflow-hidden bg-gray-50">
       <AddItem onItemAdded={handleItemAdded} />
     </div>
   );
