@@ -1,59 +1,29 @@
-// src/pages/CreateOrder.jsx
+// src/pages/EditOrder.jsx
 import React, { useMemo, useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import Select, { components } from "react-select";
 import { ArrowLeft, Search } from "lucide-react";
-import { toast } from "react-toastify";
+import { toast } from 'react-toastify';
 
-export default function CreateOrder() {
+const DropdownIndicator = (props) => (
+  <components.DropdownIndicator {...props}>
+    <Search size={16} className="text-gray-500" />
+  </components.DropdownIndicator>
+);
+
+const categoryMap = {
+  1: "Surya Medical",
+  2: "Surya Optical",
+};
+
+function EditOrder() {
+  const { orderId } = useParams();
   const [error, setError] = useState("");
   const [items, setItems] = useState([]);
   const [unitTypes, setUnitTypes] = useState([]);
-  const [categoryFilter, setCategoryFilter] = useState("both");
-  const { axios, loading, setLoading, navigate } = useAppContext();
-
-  const DropdownIndicator = (props) => (
-    <components.DropdownIndicator {...props}>
-      <Search size={16} className="text-gray-500" />
-    </components.DropdownIndicator>
-  );
-
-  const categoryMap = {
-    1: "Surya Medical",
-    2: "Surya Optical",
-  };
-
-  // Fetch items and unit types
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [itemsRes, unitTypesRes] = await Promise.all([
-          axios.get("/api/items", { params: { limit: 10000000000 } }),
-          axios.get("/api/items/unit-types"),
-        ]);
-
-        const itemsData = itemsRes.data.items || itemsRes.data.data || [];
-        setItems(itemsData);
-
-        const apiData = unitTypesRes.data?.data;
-        
-        // Use exact backend enum values
-        const allUnitTypes = [
-          ...(apiData?.medical || []),
-          ...(apiData?.optical || [])
-        ];
-        
-        console.log('Final unitTypes array:', allUnitTypes);
-        console.log('First unitType:', allUnitTypes[0]);
-        setUnitTypes(allUnitTypes);
-      } catch (err) {
-        console.error("Failed to fetch data:", err);
-        setItems([]);
-        setUnitTypes([]);
-      }
-    };
-    fetchData();
-  }, [axios]);
+  const [loading, setLoading] = useState(true);
+  const { axios, setLoading: setGlobalLoading, navigate } = useAppContext();
 
   const [form, setForm] = useState({
     customerName: "",
@@ -73,6 +43,65 @@ export default function CreateOrder() {
     ],
   });
 
+  // Fetch order data, items and unit types
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        console.log('Fetching order, items and unit types...');
+        const [orderRes, itemsRes, unitTypesRes] = await Promise.all([
+          axios.get(`/api/orders/${orderId}`),
+          axios.get("/api/items", { params: { limit: 10000000000 } }),
+          axios.get("/api/items/unit-types")
+        ]);
+
+        console.log('Order response:', orderRes.data);
+        console.log('Items response:', itemsRes.data);
+        console.log('Unit types response:', unitTypesRes.data);
+
+        // Handle different response structures
+        const orderData = orderRes.data.order || orderRes.data.data || orderRes.data;
+        const itemsData = itemsRes.data.items || itemsRes.data.data || [];
+        const unitTypesData = Array.isArray(unitTypesRes.data) ? unitTypesRes.data : [];
+
+        setItems(itemsData);
+        setUnitTypes(unitTypesData);
+        setForm({
+          customerName: orderData.customerName || "",
+          customerPhone: orderData.customerPhone || "",
+          discount: orderData.discount || 0,
+          tax: orderData.tax || 0,
+          items: orderData.items?.map(item => ({
+            itemId: item.itemId || "",
+            itemName: item.itemName || "",
+            category: Number(item.category) || "",
+            quantity: item.quantity || 1,
+            unitPrice: item.unitPrice || 0,
+            totalPrice: item.totalPrice || 0,
+            unitType: item.unitType || "",
+          })) || [
+            {
+              itemId: "",
+              itemName: "",
+              category: "",
+              quantity: 1,
+              unitPrice: 0,
+              totalPrice: 0,
+              unitType: "",
+            },
+          ],
+        });
+      } catch (err) {
+        console.error("Failed to fetch order:", err);
+        setError("Failed to load order data");
+        toast.error("Failed to load order data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [orderId, axios]);
+
   const recalcItem = (item) => ({
     ...item,
     totalPrice: Number(item.quantity || 0) * Number(item.unitPrice || 0),
@@ -86,8 +115,7 @@ export default function CreateOrder() {
   const orderTotal = useMemo(() => {
     const sub = orderSubtotal;
     const afterDiscount = sub - (sub * Number(form.discount || 0)) / 100;
-    const afterTax =
-      afterDiscount + (afterDiscount * Number(form.tax || 0)) / 100;
+    const afterTax = afterDiscount + (afterDiscount * Number(form.tax || 0)) / 100;
     return Math.max(0, Math.round(afterTax));
   }, [orderSubtotal, form.discount, form.tax]);
 
@@ -101,12 +129,7 @@ export default function CreateOrder() {
         updated.itemName = item.name;
         updated.unitPrice = item.price || 0;
         updated.category = Number(item.category);
-        // Use first available unitType from API
-        const firstUnitType = unitTypes.length > 0 ? unitTypes[0] : "tablet";
-        updated.unitType = firstUnitType;
-        console.log('Auto-setting unitType to:', firstUnitType);
-        console.log('Setting unitType to:', updated.unitType);
-        console.log('Available unitTypes:', unitTypes);
+        updated.unitType = unitTypes.length > 0 ? unitTypes[0] : "piece";
       }
     }
 
@@ -126,7 +149,7 @@ export default function CreateOrder() {
           quantity: 1,
           unitPrice: 0,
           totalPrice: 0,
-          unitType: unitTypes.length > 0 ? unitTypes[0] : "tablet",
+          unitType: unitTypes.length > 0 ? unitTypes[0] : "piece",
         },
       ],
     }));
@@ -146,31 +169,23 @@ export default function CreateOrder() {
     if (!form.customerName || form.customerName.trim().length < 3) {
       return toast.error("Customer name must be at least 3 characters.");
     }
-    if (!/^[a-zA-Z\s]+$/.test(form.customerName.trim())) {
-      return toast.error(
-        "Customer name can only contain letters and spaces."
-      );
-    }
 
     if (!/^\d{10}$/.test(form.customerPhone)) {
       return toast.error("Customer phone must be exactly 10 digits.");
     }
 
     const invalid = form.items.some(
-      (it) =>
-        !it.itemId ||
-        Number(it.quantity) <= 0 ||
-        Number(it.unitPrice) < 0 ||
-        !it.unitType
+      (it) => !it.itemId || Number(it.quantity) <= 0 || Number(it.unitPrice) < 0
     );
     if (invalid) {
       return toast.error("Please fill all required fields.");
     }
 
     const payload = {
-      orderNumber: `ORD-${Date.now()}`,
       customerName: form.customerName,
       customerPhone: form.customerPhone,
+      discount: form.discount,
+      tax: form.tax,
       subtotal: orderSubtotal,
       totalAmount: orderTotal,
       items: form.items.map((it) => ({
@@ -185,29 +200,34 @@ export default function CreateOrder() {
     };
 
     try {
-      setLoading(true);
-      await axios.post("/api/orders", payload);
-      toast.success("Order created successfully!");
-      navigate("/orders");
+      setGlobalLoading(true);
+      console.log('Updating order with payload:', payload);
+      await axios.put(`/api/orders/${orderId}`, payload);
+      toast.success("Order updated successfully!");
+      navigate("/orders", { state: { refresh: true } });
     } catch (e) {
-      const msg = e?.response?.data?.message || "Failed to create order";
+      console.error('Update error:', e);
+      const msg = e?.response?.data?.message || "Failed to update order";
       setError(msg);
       toast.error(msg);
     } finally {
-      setLoading(false);
+      setGlobalLoading(false);
     }
   };
 
-  const filteredItems = items.filter((item) => {
-    if (categoryFilter === "medical") return Number(item.category) === 1;
-    if (categoryFilter === "optical") return Number(item.category) === 2;
-    return true;
-  });
-
-  const itemOptions = filteredItems.map((item) => ({
+  const itemOptions = items?.map((item) => ({
     value: item._id,
     label: item.name,
-  }));
+  })) || [];
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <p className="ml-4 text-gray-600">Loading order data...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto">
@@ -219,7 +239,7 @@ export default function CreateOrder() {
         >
           <ArrowLeft size={18} /> Back
         </button>
-        <h1 className="text-2xl font-bold text-gray-800">📝 Create Order</h1>
+        <h1 className="text-2xl font-bold text-gray-800">✏️ Edit Order</h1>
       </div>
 
       {error && (
@@ -237,7 +257,7 @@ export default function CreateOrder() {
               Customer Name
             </label>
             <input
-              className="border rounded-lg p-3 w-full"
+              className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none w-full"
               placeholder="Customer Name *"
               value={form.customerName}
               onChange={(e) =>
@@ -253,7 +273,7 @@ export default function CreateOrder() {
             <input
               type="text"
               inputMode="numeric"
-              className="border rounded-lg p-3 w-full"
+              className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none w-full"
               placeholder="Customer Phone *"
               value={form.customerPhone}
               onChange={(e) => {
@@ -273,7 +293,7 @@ export default function CreateOrder() {
             <input
               type="number"
               min="0"
-              className="border rounded-lg p-3 w-full"
+              className="border rounded-lg p-3 w-full focus:ring-2 focus:ring-green-500 outline-none"
               value={form.discount}
               onChange={(e) =>
                 setForm((f) => ({ ...f, discount: Number(e.target.value) }))
@@ -285,7 +305,7 @@ export default function CreateOrder() {
             <input
               type="number"
               min="0"
-              className="border rounded-lg p-3 w-full"
+              className="border rounded-lg p-3 w-full focus:ring-2 focus:ring-green-500 outline-none"
               value={form.tax}
               onChange={(e) =>
                 setForm((f) => ({ ...f, tax: Number(e.target.value) }))
@@ -298,50 +318,13 @@ export default function CreateOrder() {
         <div className="border-t pt-4">
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-semibold text-lg">📦 Items</h3>
-            <div className="flex items-center gap-3">
-              <div className="bg-gray-100 rounded-lg p-1">
-                <button
-                  type="button"
-                  onClick={() => setCategoryFilter("both")}
-                  className={`px-3 py-1 rounded text-sm ${
-                    categoryFilter === "both"
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-600"
-                  }`}
-                >
-                  Both
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCategoryFilter("medical")}
-                  className={`px-3 py-1 rounded text-sm ${
-                    categoryFilter === "medical"
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-600"
-                  }`}
-                >
-                  🏥 Medical
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCategoryFilter("optical")}
-                  className={`px-3 py-1 rounded text-sm ${
-                    categoryFilter === "optical"
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-600"
-                  }`}
-                >
-                  👓 Optical
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={addItemRow}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
-              >
-                + Add Item
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={addItemRow}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
+            >
+              + Add Item
+            </button>
           </div>
 
           {form.items.map((it, idx) => (
@@ -351,9 +334,7 @@ export default function CreateOrder() {
             >
               <Select
                 options={itemOptions}
-                value={
-                  itemOptions.find((opt) => opt.value === it.itemId) || null
-                }
+                value={itemOptions.find((opt) => opt.value === it.itemId) || null}
                 onChange={(selected) => updateItem(idx, "itemId", selected?.value)}
                 placeholder="Search Item..."
                 components={{ DropdownIndicator }}
@@ -373,15 +354,11 @@ export default function CreateOrder() {
                 value={it.unitType}
                 onChange={(e) => updateItem(idx, "unitType", e.target.value)}
                 className="border rounded-lg p-2"
-                required
               >
                 <option value="">Select Unit</option>
-                {Array.isArray(unitTypes) &&
-                  unitTypes.map((unitType) => (
-                    <option key={unitType} value={unitType}>
-                      {unitType}
-                    </option>
-                  ))}
+                {Array.isArray(unitTypes) && unitTypes.map((unitType) => (
+                  <option key={unitType} value={unitType}>{unitType}</option>
+                ))}
               </select>
 
               <input
@@ -399,9 +376,7 @@ export default function CreateOrder() {
                 className="border rounded-lg p-2"
                 placeholder="Enter unit price"
                 value={it.unitPrice}
-                onChange={(e) =>
-                  updateItem(idx, "unitPrice", e.target.value)
-                }
+                onChange={(e) => updateItem(idx, "unitPrice", e.target.value)}
               />
 
               <div className="flex justify-between items-center">
@@ -421,17 +396,17 @@ export default function CreateOrder() {
           ))}
         </div>
 
-        {/* Summary */}
+        {/* Totals */}
         <div className="flex flex-col md:flex-row justify-end gap-6 pt-4 border-t">
-          <div>
+          <div className="text-gray-700">
             Subtotal: <b>₹{orderSubtotal}</b>
           </div>
-          <div>
-            Discount ({form.discount}%):{" "}
+          <div className="text-gray-700">
+            Discount ({form.discount}%): {" "}
             <b>-₹{Math.round((orderSubtotal * form.discount) / 100)}</b>
           </div>
-          <div>
-            Tax ({form.tax}%):{" "}
+          <div className="text-gray-700">
+            Tax ({form.tax}%): {" "}
             <b>
               +₹
               {Math.round(
@@ -441,18 +416,20 @@ export default function CreateOrder() {
               )}
             </b>
           </div>
-          <div>
-            Total:{" "}
+          <div className="text-gray-900">
+            Total: {" "}
             <b className="text-lg text-emerald-600">₹{orderTotal}</b>
           </div>
           <button
             type="submit"
             className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg shadow-md"
           >
-            {loading ? "Saving..." : "Save Order"}
+            Update Order
           </button>
         </div>
       </form>
     </div>
   );
 }
+
+export default EditOrder;

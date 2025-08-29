@@ -14,8 +14,45 @@ function EditItemPage() {
     price: 0,
     category: '',
     stock: 0,
+    unit: '',
     is_oos: false,
   });
+  const [units, setUnits] = useState([]);
+
+  // Fetch units from backend when category changes
+  useEffect(() => {
+    if (formData.category) {
+      fetchUnits(formData.category);
+    } else {
+      setUnits([]);
+    }
+  }, [formData.category]);
+
+  const fetchUnits = async (category) => {
+    try {
+      console.log('Fetching units for category:', category);
+      const response = await axios.get(`/api/items/unit-types`, {
+        params: { category: category }
+      });
+      console.log('Units response:', response.data);
+      
+      // Extract units based on category from the response structure
+      let unitsData = [];
+      if (response.data.data) {
+        if (category === '1' && response.data.data.medical) {
+          unitsData = response.data.data.medical;
+        } else if (category === '2' && response.data.data.optical) {
+          unitsData = response.data.data.optical;
+        }
+      }
+      
+      console.log('Category:', category, 'Extracted units:', unitsData);
+      setUnits(unitsData);
+    } catch (error) {
+      console.error('Failed to fetch units from backend:', error);
+      setUnits([]);
+    }
+  };
 
   useEffect(() => {
     if (location.state?.item) {
@@ -31,6 +68,8 @@ function EditItemPage() {
     setFormData(prev => ({
       ...prev,
       [name]: name === 'price' || name === 'stock' ? Number(value) : value,
+      // Reset unit when category changes
+      ...(name === 'category' && { unit: '' })
     }));
   };
 
@@ -41,10 +80,10 @@ function EditItemPage() {
       console.log('Item ID:', id);
       console.log('Form data being sent:', formData);
       console.log('Stock value:', formData.stock, 'Type:', typeof formData.stock);
-      console.log('API URL:', `${import.meta.env.VITE_BACKEND_URL}api/item/${id}`);
-      
-      const response = await axios.put(`${import.meta.env.VITE_BACKEND_URL}api/item/${id}`, formData);
-      
+      console.log('API URL:', `${import.meta.env.VITE_BACKEND_URL}api/items/${id}`);
+
+      const response = await axios.put(`${import.meta.env.VITE_BACKEND_URL}api/items/${id}`, formData);
+
       console.log('=== UPDATE RESPONSE ===');
       console.log('Status:', response.status);
       console.log('Response data:', response.data);
@@ -61,58 +100,93 @@ function EditItemPage() {
     }
   };
 
+  const handleBack = () => {
+    navigate('/items');
+  };
+
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4">
-      <div className="flex items-center mb-8">
-        <button 
-          onClick={() => navigate('/items')}
-          className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 mr-4"
+    <div className="w-full h-screen bg-white shadow-lg rounded-none p-8" style={{overflow: 'auto'}}>
+      <div className="flex items-center gap-3 mb-4">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
         >
-          Back to Items
+          <span style={{fontSize: '18px'}}>&larr;</span> Back
         </button>
-        <h3 className="text-3xl font-bold text-indigo-700">Edit Item</h3>
+        <h2 className="text-2xl font-bold text-gray-800">✏️ Edit Item</h2>
       </div>
       
-      <div className="bg-white p-8 rounded-lg shadow-lg max-w-lg mx-auto">
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="bg-white shadow-lg rounded-2xl p-6 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-gray-700 font-medium">Item Name</label>
+            <label className="text-sm font-medium text-gray-600 mb-1">Item Name</label>
             <input
               type="text"
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:border-blue-300"
+              placeholder="Enter item name"
+              className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none w-full"
               required
             />
           </div>
-
           <div>
-            <label className="block text-gray-700 font-medium">Price (₹)</label>
+            <label className="text-sm font-medium text-gray-600 mb-1">Price (₹)</label>
             <input
               type="number"
               name="price"
               value={formData.price}
               onChange={handleChange}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:border-blue-300"
+              placeholder="Enter price"
+              className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none w-full"
               required
             />
           </div>
-
           <div>
-            <label className="block text-gray-700 font-medium">Stock</label>
+            <label className="text-sm font-medium text-gray-600 mb-1">Category *</label>
+            <select
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none w-full"
+              required
+            >
+              <option value="">Select category</option>
+              <option value="1">Surya Medical</option>
+              <option value="2">Surya Optical</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-600 mb-1">Stock</label>
             <input
               type="number"
               name="stock"
               value={formData.stock}
               onChange={handleChange}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:border-blue-300"
+              placeholder="Enter stock"
+              min="0"
+              className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none w-full"
               required
             />
           </div>
-
           <div>
-            <label className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-600 mb-1">Unit</label>
+            <select
+              name="unit"
+              value={formData.unit}
+              onChange={handleChange}
+              disabled={!formData.category}
+              className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none w-full disabled:bg-gray-100"
+            >
+              <option value="">{!formData.category ? "Select category first" : "Select unit"}</option>
+              {Array.isArray(units) && units.map((unit, index) => (
+                <option key={index} value={unit}>{unit}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="flex items-center gap-2 mt-6">
               <input
                 type="checkbox"
                 name="is_oos"
@@ -120,45 +194,33 @@ function EditItemPage() {
                 onChange={(e) => setFormData(prev => ({ ...prev, is_oos: e.target.checked }))}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <span className="text-gray-700 font-medium">Out of Stock</span>
+              <span className="text-sm font-medium text-gray-600">Out of Stock</span>
             </label>
           </div>
-
-          <div>
-            <label className="block text-gray-700 font-medium">Category</label>
-            <select
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:border-blue-300"
-              required
-            >
-              <option value="">Select category</option>
-              <option value="2">Surya Optical</option>
-              <option value="1">Surya Medical</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-gray-700 font-medium">Description</label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              rows="3"
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:border-blue-300"
-              required
-            />
-          </div>
-
+        </div>
+        
+        <div>
+          <label className="text-sm font-medium text-gray-600 mb-1">Description</label>
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            placeholder="Enter description"
+            rows="3"
+            className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none w-full"
+            required
+          />
+        </div>
+        
+        <div className="flex justify-end">
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600"
+            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg shadow-md"
           >
             Update Item
           </button>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 }

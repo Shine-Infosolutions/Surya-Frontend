@@ -4,8 +4,11 @@ import { toast } from 'react-toastify';
 import { useAppContext } from '../context/AppContext';
 
 // Category mapping function
-const getCategoryText = (categoryNumber) => {
-  return categoryNumber === 1 ? 'Surya Medical' : categoryNumber === 2 ? 'Surya Optical' : categoryNumber;
+const getCategoryText = (category) => {
+  const categoryNum = Number(category);
+  if (categoryNum === 1) return 'Surya Medical';
+  if (categoryNum === 2) return 'Surya Optical';
+  return category;
 };
 
 function ItemsList() {
@@ -13,7 +16,7 @@ function ItemsList() {
   
   // Debug items state
   console.log('Current items state:', items);
-  console.log('Items length:', items.length);
+  console.log('items length:', items.length);
   const [filteredItems, setFilteredItems] = useState([]);
   const [sortBy, setSortBy] = useState('Both');
   const [stockFilter, setStockFilter] = useState('all'); // 'all', 'in_stock', 'out_of_stock'
@@ -58,35 +61,29 @@ function ItemsList() {
     }
   }, [location.state, searchTerm, currentPage]);
 
-  // Search functionality with debounce
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchItems(searchTerm, currentPage);
-    }, 500); // 500ms debounce
-
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm, currentPage]);
+  // No backend search - using frontend search only
 
   async function fetchItems(search = '', page = 1) {
       try {
         const params = { page, limit: itemsPerPage };
-        if (search.trim()) {
-          params.search = search.trim();
-        }
-        const fullUrl = axios.defaults.baseURL + '/api/item';
-        console.log('Fetching items from:', '/api/item');
+        // Removed backend search parameter
+        const fullUrl = axios.defaults.baseURL + '/api/items';
+        console.log('Fetching items from:', '/api/items');
         console.log('Params:', params);
         console.log('Full URL:', fullUrl);
         console.log('Axios base URL:', axios.defaults.baseURL);
-        const res = await axios.get('/api/item', { params });
+        const res = await axios.get('/api/items', { params });
         console.log('Raw response:', res);
         console.log('Response data:', res.data);
         console.log('Data type:', typeof res.data);
         console.log('Is array:', Array.isArray(res.data));
+        console.log('Complete response data:', JSON.stringify(res.data, null, 2));
         
-        // Extract items and pagination from the response object
-        const data = res.data.items || [];
-        const pagination = res.data.pagination || {};
+        // Extract items from API response structure
+        const data = res.data.data || [];
+        const pagination = {
+          totalPages: Math.ceil((res.data.meta?.total || 0) / (res.data.meta?.limit || 25))
+        };
         console.log('Extracted items:', data);
         console.log('Items count:', data.length);
         console.log('Pagination:', pagination);
@@ -104,17 +101,28 @@ function ItemsList() {
       }
     }
 
-  // Backend handles all filtering, so we update filters by refetching
-  useEffect(() => {
-    if (sortBy !== 'Both' || stockFilter !== 'all') {
-      // When filters change, refetch from backend with filters
-      fetchItems(searchTerm, currentPage);
-    }
-  }, [sortBy, stockFilter]);
+  // Frontend filtering only - no need to refetch on sortBy change
 
   const safeFilteredItems = Array.isArray(filteredItems) ? filteredItems : [];
-  // Use backend pagination - show all items from current page
-  const currentItems = safeFilteredItems;
+  // Filter items by search, category and stock status in frontend
+  const currentItems = safeFilteredItems.filter(item => {
+    // Search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const nameMatch = item.name?.toLowerCase().includes(searchLower) || false;
+      const descMatch = item.description?.toLowerCase().includes(searchLower) || false;
+      if (!nameMatch && !descMatch) {
+        return false;
+      }
+    }
+    // Category filter
+    if (sortBy === '1' && Number(item.category) !== 1) return false;
+    if (sortBy === '2' && Number(item.category) !== 2) return false;
+    // Stock filter
+    if (stockFilter === 'in_stock') return item.stock > 0;
+    if (stockFilter === 'out_of_stock') return item.stock === 0;
+    return true;
+  });
   // Get totalPages from backend response (will be set in fetchItems)
   const [totalPages, setTotalPages] = useState(1);
 
@@ -136,7 +144,7 @@ function ItemsList() {
     setDeletingId(id);
     try {
       console.log('Deleting item with id:', id);
-      await axios.delete(`/api/item/${id}`);
+      await axios.delete(`/api/items/${id}`);
       setItems(items.filter(item => item._id !== id));
       fetchItems();
       toast.success('Item deleted successfully!');
@@ -165,17 +173,19 @@ function ItemsList() {
       </div>
       
       <div className="flex justify-between mb-6">
-        <div className="flex items-center gap-2 print:hidden">
-          <label className="text-sm font-medium text-gray-700">Sort by:</label>
-          <select 
-            value={sortBy} 
-            onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="Both">Both</option>
-            <option value="2">Surya Opticals</option>
-            <option value="1">Surya Medicals</option>
-          </select>
+        <div className="flex items-center gap-4 print:hidden">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Sort by:</label>
+            <select 
+              value={sortBy} 
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="Both">Both</option>
+              <option value="2">Surya Opticals</option>
+              <option value="1">Surya Medicals</option>
+            </select>
+          </div>
         </div>
         <button
           className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
@@ -194,28 +204,17 @@ function ItemsList() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <div className="flex items-center gap-3">
-                  Stock
-                  <div className="flex items-center">
-                    <button
-                      onClick={() => {
-                        if (stockFilter === 'all') setStockFilter('in_stock');
-                        else if (stockFilter === 'in_stock') setStockFilter('out_of_stock');
-                        else setStockFilter('all');
-                      }}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                        stockFilter === 'out_of_stock' ? 'bg-red-500' : 
-                        stockFilter === 'in_stock' ? 'bg-green-500' : 'bg-gray-300'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                          stockFilter === 'out_of_stock' ? 'translate-x-5' : 
-                          stockFilter === 'in_stock' ? 'translate-x-1' : 'translate-x-3'
-                        }`}
-                      />
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <span>Stock</span>
+                  <select
+                    value={stockFilter}
+                    onChange={e => setStockFilter(e.target.value)}
+                    className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                  >
+                    <option value="all">All</option>
+                    <option value="in_stock">In Stock</option>
+                    <option value="out_of_stock">Out of Stock</option>
+                  </select>
                 </div>
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider print:hidden">Actions</th>
