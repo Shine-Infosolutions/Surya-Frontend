@@ -3,6 +3,8 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import { toast } from "react-toastify";
+import html2pdf from 'html2pdf.js';
+
 
 // ✅ Category Mapping
 const categoryMap = {
@@ -49,167 +51,62 @@ export default function InvoiceViewer() {
     window.print();
   };
 
-  const handleDownload = async () => {
-    if (!invoice) return;
-    
-    try {
-      const html2pdf = (await import('html2pdf.js')).default;
-      
-      // Create PDF-friendly HTML with inline styles only
-      const pdfContent = `
-        <div style="font-family: Arial, sans-serif; padding: 20px; background: white;">
-          <!-- Header -->
-          <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
-            <div style="font-size: 48px; font-weight: bold; color: #2563eb;">SA</div>
-            <div style="text-align: right;">
-              <h1 style="font-size: 24px; font-weight: bold; color: #1f2937; margin-bottom: 10px;">Hospital Invoice</h1>
-              <div style="font-size: 14px; color: #4b5563;">
-                <div>Invoice no.: ${invoice.orderNumber || invoice._id}</div>
-                <div>Invoice date: ${formatIST(invoice.createdAt || invoice.date)}</div>
-                <div>Due: ${formatIST(invoice.createdAt || invoice.date)}</div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Company Info -->
-          <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
-            <div>
-              <div style="font-weight: bold; color: #1f2937;">Surya Medical And Optical</div>
-              <div style="font-size: 14px; color: #4b5563;">
-                <div>Dr. Chaturvedi</div>
-                <div>suryamedical.com</div>
-                <div>9234679597</div>
-              </div>
-            </div>
-            <div>
-              <div style="font-weight: bold; color: #1f2937; margin-bottom: 10px;">Bill to</div>
-              <div style="font-weight: bold; color: #1f2937;">${invoice.customerName}</div>
-              <div style="font-size: 14px; color: #4b5563;">${invoice.customerPhone}</div>
-            </div>
-          </div>
-          
-          <!-- Items Table -->
-          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-            <thead>
-              <tr style="background-color: #2563eb; color: white;">
-                <th style="border: 1px solid #000; padding: 8px; text-align: left;">S.No</th>
-                <th style="border: 1px solid #000; padding: 8px; text-align: left;">Item Description</th>
-                <th style="border: 1px solid #000; padding: 8px; text-align: center;">Unit Type</th>
-                <th style="border: 1px solid #000; padding: 8px; text-align: center;">Rate (₹)</th>
-                <th style="border: 1px solid #000; padding: 8px; text-align: center;">Quantity</th>
-                <th style="border: 1px solid #000; padding: 8px; text-align: right;">Amount (₹)</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${invoice.items?.map((item, idx) => `
-                <tr>
-                  <td style="border: 1px solid #000; padding: 8px; text-align: center;">${idx + 1}</td>
-                  <td style="border: 1px solid #000; padding: 8px;">
-                    <div style="font-weight: bold;">${item.itemName}</div>
-                    <div style="font-size: 12px; color: #4b5563;">${categoryMap[item.category] || categoryMap[Number(item.category)] || "Medical Item"}</div>
-                  </td>
-                  <td style="border: 1px solid #000; padding: 8px; text-align: center;">${item.unitType || "N/A"}</td>
-                  <td style="border: 1px solid #000; padding: 8px; text-align: center;">₹${Number(item.unitPrice || 0).toFixed(2)}</td>
-                  <td style="border: 1px solid #000; padding: 8px; text-align: center;">${item.quantity}</td>
-                  <td style="border: 1px solid #000; padding: 8px; text-align: right; font-weight: bold;">₹${Number(item.totalPrice || 0).toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          
-          <!-- Totals -->
-          <div style="display: flex; justify-content: space-between; margin-top: 30px;">
-            <div>
-              <div style="font-weight: bold; color: #1f2937; margin-bottom: 10px;">Payment instruction</div>
-              <div style="font-size: 14px; color: #4b5563;">
-                <div>UPI ID: suryaapps@paytm</div>
-                <div>Account: 1234567890</div>
-                <div>Branch: HDFC Bank</div>
-                <div>IFSC CODE: HDFC0001678</div>
-              </div>
-            </div>
-            <div style="max-width: 300px;">
-              <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px;">
-                <span>Subtotal:</span>
-                <span>₹${Number(invoice.subtotal || 0).toFixed(2)}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px;">
-                <span>Discount (${invoice.discount || 0}%):</span>
-                <span>-₹${Number((invoice.subtotal * (invoice.discount || 0)) / 100 || 0).toFixed(2)}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 10px;">
-                <span>Tax (${invoice.tax || 0}%):</span>
-                <span>+₹${Number(((invoice.subtotal - (invoice.subtotal * (invoice.discount || 0)) / 100) * (invoice.tax || 0)) / 100 || 0).toFixed(2)}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; border-top: 1px solid #000; padding-top: 10px;">
-                <span>Grand Total</span>
-                <span>₹${Number(invoice.totalAmount || 0).toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Notes -->
-          <div style="margin-top: 30px;">
-            <div style="font-weight: bold; color: #1f2937; margin-bottom: 10px;">Notes</div>
-            <div style="font-size: 14px; color: #4b5563;">
-              Thank you for choosing our medical services. For any queries, please contact us at the above details.
-            </div>
-          </div>
-          
-          <!-- Signature -->
-          <div style="text-align: right; margin-top: 50px;">
-            <div style="border-bottom: 1px solid #000; width: 200px; margin-left: auto; margin-bottom: 10px;"></div>
-            <div style="font-size: 14px; color: #4b5563;">Authorized Signature</div>
-          </div>
-        </div>
+  const handleDownload = () => {
+    if (printRef.current) {
+      const element = document.createElement("a");
+      const html = `
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>Hospital Invoice</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; margin: 0; color: #000; background: white; }
+              .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; }
+              .logo { font-size: 48px; font-weight: bold; color: #2563eb; }
+              .invoice-title { text-align: right; }
+              .invoice-title h1 { font-size: 24px; margin: 0; color: #333; }
+              .invoice-details { text-align: right; font-size: 12px; color: #666; margin-top: 10px; }
+              .company-info { display: flex; justify-content: space-between; margin: 30px 0; }
+              .from-section, .bill-to-section { flex: 1; margin-right: 20px; }
+              .section-title { font-weight: bold; color: #333; margin-bottom: 10px; }
+              .company-name { font-weight: bold; color: #333; }
+              .items-table { width: 100%; border-collapse: collapse; margin: 30px 0; }
+              .items-table th { background: #2563eb; color: white; padding: 12px; text-align: left; font-size: 12px; }
+              .items-table td { padding: 12px; border-bottom: 1px solid #eee; }
+              .items-table .text-right { text-align: right; }
+              .items-table .text-center { text-align: center; }
+              .totals-section { margin-top: 30px; display: flex; justify-content: space-between; }
+              .payment-info { flex: 1; margin-right: 40px; }
+              .totals { flex: 1; max-width: 300px; }
+              .total-row { display: flex; justify-content: space-between; margin: 5px 0; }
+              .total-row.final { font-weight: bold; font-size: 16px; border-top: 1px solid #333; padding-top: 10px; margin-top: 10px; }
+              .notes { margin-top: 30px; }
+              .signature { text-align: right; margin-top: 50px; }
+              .signature-line { border-bottom: 1px solid #333; width: 200px; margin-left: auto; margin-bottom: 5px; }
+              .qr-code { width: 80px; height: 80px; background: #000; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; margin-top: 8px; }
+            </style>
+          </head>
+          <body>${printRef.current.innerHTML}</body>
+        </html>
       `;
-      
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = pdfContent;
-      document.body.appendChild(tempDiv);
-      
-      const options = {
-        margin: 10,
-        filename: `invoice-${invoice.orderNumber || orderId}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 1.5, backgroundColor: '#ffffff' },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-      
-      await html2pdf().set(options).from(tempDiv).save();
-      document.body.removeChild(tempDiv);
-      
-      toast.success('PDF downloaded successfully!');
-    } catch (error) {
-      console.error('PDF download failed:', error);
-      toast.error('Failed to download PDF: ' + error.message);
+      const blob = new Blob([html], { type: "text/html" });
+      element.href = URL.createObjectURL(blob);
+      element.download = `hospital-invoice-${invoice.invoiceNumber || invoice.orderNumber || orderId}.html`;
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
     }
   };
 
   const handleSend = () => {
-    if (!invoice || !invoice.customerPhone) {
-      toast.error('Customer phone number not found!');
-      return;
-    }
-    
-    let message = `🏥 *Hospital Invoice*\n\n`;
-    message += `📋 Invoice No: ${invoice.orderNumber || invoice._id}\n`;
-    message += `👤 Patient: ${invoice.customerName}\n`;
-    message += `📅 Date: ${formatIST(invoice.createdAt)}\n\n`;
-    message += `💊 *Prescribed Items:*\n`;
-    
+    if (!invoice) return;
+    const subject = `Hospital Invoice #${invoice.invoiceNumber || invoice.orderNumber || invoice._id}`;
+    let body = `Hospital Invoice%0D%0A%0D%0AInvoice Number: ${invoice.invoiceNumber || invoice.orderNumber || invoice._id}%0D%0APatient: ${invoice.customerName}%0D%0APhone: ${invoice.customerPhone}%0D%0ADate: ${formatIST(invoice.createdAt)}%0D%0A%0D%0APrescribed Items:%0D%0A`;
     invoice.items?.forEach((item, idx) => {
-      message += `${idx + 1}. ${item.itemName} x${item.quantity} @ ₹${item.unitPrice} = ₹${item.totalPrice}\n`;
+      body += `${idx + 1}. ${item.itemName} x${item.quantity} @ ₹${item.unitPrice} = ₹${item.totalPrice}%0D%0A`;
     });
-    
-    message += `\n💰 *Total Amount: ₹${invoice.totalAmount || "N/A"}*\n\n`;
-    message += `Thank you for choosing Surya Medical & Optical! 🙏`;
-    
-    const phoneNumber = invoice.customerPhone.startsWith('+91') ? invoice.customerPhone : `+91${invoice.customerPhone}`;
-    const whatsappUrl = `https://wa.me/${phoneNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
-    
-    window.open(whatsappUrl, '_blank');
-    toast.success('Opening WhatsApp...');
+    body += `%0D%0ATotal Amount: ₹${invoice.totalAmount || "N/A"}`;
+    window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${body}`);
   };
 
   if (loading) return <div className="flex justify-center items-center min-h-screen">Loading invoice...</div>;
@@ -234,24 +131,6 @@ export default function InvoiceViewer() {
           .no-print {
             display: none !important;
           }
-          table {
-            border-collapse: collapse !important;
-            width: 100% !important;
-          }
-          th, td {
-            border: 1px solid #000 !important;
-            padding: 8px !important;
-            font-size: 12px !important;
-          }
-          th {
-            background-color: #2563eb !important;
-            color: white !important;
-            font-weight: bold !important;
-          }
-          .bg-blue-600 {
-            background-color: #2563eb !important;
-            color: white !important;
-          }
         }
       `}</style>
       
@@ -265,8 +144,8 @@ export default function InvoiceViewer() {
             <button onClick={handleDownload} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2">
               📥 Download
             </button>
-            <button onClick={handleSend} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2">
-              📱 Send WhatsApp
+            <button onClick={handleSend} className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2">
+              📧 Send
             </button>
           </div>
 
@@ -280,7 +159,7 @@ export default function InvoiceViewer() {
                   <h1 className="text-2xl font-bold text-gray-800 mb-2">Hospital Invoice</h1>
                   
                   <div className="invoice-details text-sm text-gray-600 mt-4">
-                    <div>Invoice no.: {invoice.orderNumber || invoice._id}</div>
+                    <div>Invoice no.: {invoice.invoiceNumber || invoice.orderNumber || invoice._id}</div>
                     <div>Invoice date: {formatIST(invoice.createdAt || invoice.date)}</div>
                     <div>Due: {formatIST(invoice.createdAt || invoice.date)}</div>
                   </div>
@@ -306,37 +185,35 @@ export default function InvoiceViewer() {
                 </div>
               </div>
               {/* Items Table */}
-              <div className="overflow-x-auto mb-8">
-                <table className="w-full border-collapse border border-gray-300">
-                  <thead>
-                    <tr className="bg-blue-600 text-white">
-                      <th className="border border-gray-300 p-3 text-left text-xs uppercase font-semibold">S.No</th>
-                      <th className="border border-gray-300 p-3 text-left text-xs uppercase font-semibold">Item Description</th>
-                      <th className="border border-gray-300 p-3 text-center text-xs uppercase font-semibold">Unit Type</th>
-                      <th className="border border-gray-300 p-3 text-center text-xs uppercase font-semibold">Rate (₹)</th>
-                      <th className="border border-gray-300 p-3 text-center text-xs uppercase font-semibold">Quantity</th>
-                      <th className="border border-gray-300 p-3 text-right text-xs uppercase font-semibold">Amount (₹)</th>
+              <table className="items-table w-full border-collapse mb-8">
+                <thead>
+                  <tr className="bg-blue-600 text-white">
+                    <th className="p-3 text-left text-xs uppercase">Description</th>
+                    <th className="p-3 text-center text-xs uppercase">Rate</th>
+                    <th className="p-3 text-center text-xs uppercase">QTY</th>
+                    <th className="p-3 text-center text-xs uppercase">Tax</th>
+                    <th className="p-3 text-center text-xs uppercase">Discount</th>
+                    <th className="p-3 text-right text-xs uppercase">Amount (INR)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoice.items?.map((item, idx) => (
+                    <tr key={idx}>
+                      <td className="p-3">
+                        <div className="font-medium">{item.itemName}</div>
+                        <div className="text-sm text-gray-600">
+                          {categoryMap[item.category] || categoryMap[Number(item.category)] || item.category || "Medical Item"}
+                        </div>
+                      </td>
+                      <td className="p-3 text-center">₹{item.unitPrice}</td>
+                      <td className="p-3 text-center">{item.quantity}</td>
+                      <td className="p-3 text-center">{invoice.tax || 0}%</td>
+                      <td className="p-3 text-center">{invoice.discount || 0}%</td>
+                      <td className="p-3 text-right font-medium">₹{Number(item.totalPrice || 0).toFixed(2)}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {invoice.items?.map((item, idx) => (
-                      <tr key={idx} className="border-b">
-                        <td className="border border-gray-300 p-3 text-center">{idx + 1}</td>
-                        <td className="border border-gray-300 p-3">
-                          <div className="font-medium">{item.itemName}</div>
-                          <div className="text-sm text-gray-600">
-                            {categoryMap[item.category] || categoryMap[Number(item.category)] || "Medical Item"}
-                          </div>
-                        </td>
-                        <td className="border border-gray-300 p-3 text-center">{item.unitType || "N/A"}</td>
-                        <td className="border border-gray-300 p-3 text-center">₹{Number(item.unitPrice || 0).toFixed(2)}</td>
-                        <td className="border border-gray-300 p-3 text-center">{item.quantity}</td>
-                        <td className="border border-gray-300 p-3 text-right font-medium">₹{Number(item.totalPrice || 0).toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
 
               {/* Totals Section */}
               <div className="totals-section flex justify-between">

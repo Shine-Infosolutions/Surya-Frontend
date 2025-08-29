@@ -7,16 +7,27 @@ const SideBar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { setUser } = useAppContext();
-
-  const menuItems = [
-    { name: "User Management", path: "/user", icon: <Users size={16} /> },
-    { name: "Dashboard", path: "/", icon: <Home size={16} /> },
-    { name: "Items List", path: "/items", icon: <Package size={16} /> },
-    { name: "Orders", path: "/orders", icon: <ShoppingCart size={16} /> },
+  
+  // Get user role from localStorage
+  const userRole = parseInt(localStorage.getItem("userRole")) || 2;
+  
+  // Define menu items based on role
+  const allMenuItems = [
+    { name: "User Management", path: "/user", icon: <Users size={16} />, adminOnly: true },
+    { name: "Dashboard", path: "/", icon: <Home size={16} />, adminOnly: true },
+    { name: "Items List", path: "/items", icon: <Package size={16} />, adminOnly: false },
+    { name: "Orders", path: "/orders", icon: <ShoppingCart size={16} />, adminOnly: false },
   ];
+  
+  // Filter menu items based on role
+  const menuItems = userRole === 1 
+    ? allMenuItems // Admin sees all
+    : allMenuItems.filter(item => !item.adminOnly); // Staff sees only non-admin items
 
   const handleLogout = () => {
     setUser(null);
+    localStorage.removeItem("user");
+    localStorage.removeItem("userRole");
     navigate("/login");
   };
 

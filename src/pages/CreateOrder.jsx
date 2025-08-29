@@ -10,7 +10,7 @@ export default function CreateOrder() {
   const [items, setItems] = useState([]);
   const [unitTypes, setUnitTypes] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState("both");
-  const { axios, loading, setLoading, navigate } = useAppContext();
+  const { axios, loading, setLoading, navigate, user } = useAppContext();
 
   const DropdownIndicator = (props) => (
     <components.DropdownIndicator {...props}>
@@ -25,7 +25,18 @@ export default function CreateOrder() {
 
   const fetchItems = async () => {
     try {
-      const itemsRes = await axios.get("/api/items", { params: { limit: 10000000000 } });
+      const params = { limit: 10000000000 };
+      
+      // Admin sees all data, staff sees only their category data
+      const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const userRole = user?.role || storedUser.role || 'staff';
+      const userCategory = user?.category || storedUser.category;
+      
+      if (userRole === 'staff' && userCategory) {
+        params.category = userCategory;
+      }
+      
+      const itemsRes = await axios.get("/api/items", { params });
       const itemsData = itemsRes.data.items || itemsRes.data.data || [];
       setItems(itemsData);
     } catch (err) {
@@ -38,8 +49,19 @@ export default function CreateOrder() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const params = { limit: 10000000000 };
+        
+        // Admin sees all data, staff sees only their category data
+        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const userRole = user?.role || storedUser.role || 'staff';
+        const userCategory = user?.category || storedUser.category;
+        
+        if (userRole === 'staff' && userCategory) {
+          params.category = userCategory;
+        }
+        
         const [itemsRes, unitTypesRes] = await Promise.all([
-          axios.get("/api/items", { params: { limit: 10000000000 } }),
+          axios.get("/api/items", { params }),
           axios.get("/api/items/unit-types"),
         ]);
 
