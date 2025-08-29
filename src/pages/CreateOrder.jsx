@@ -23,6 +23,17 @@ export default function CreateOrder() {
     2: "Surya Optical",
   };
 
+  const fetchItems = async () => {
+    try {
+      const itemsRes = await axios.get("/api/items", { params: { limit: 10000000000 } });
+      const itemsData = itemsRes.data.items || itemsRes.data.data || [];
+      setItems(itemsData);
+    } catch (err) {
+      console.error("Failed to fetch items:", err);
+      setItems([]);
+    }
+  };
+
   // Fetch items and unit types
   useEffect(() => {
     const fetchData = async () => {
@@ -37,11 +48,12 @@ export default function CreateOrder() {
 
         const apiData = unitTypesRes.data?.data;
         
-        // Use exact backend enum values
+        // Use backend values but filter to only valid enum values
+        const validEnums = ['tablet', 'bottle', 'strip', 'piece', 'frame', 'lens'];
         const allUnitTypes = [
           ...(apiData?.medical || []),
           ...(apiData?.optical || [])
-        ];
+        ].filter(unit => validEnums.includes(unit.toLowerCase())).map(unit => unit.toLowerCase());
         
         console.log('Final unitTypes array:', allUnitTypes);
         console.log('First unitType:', allUnitTypes[0]);
@@ -101,12 +113,9 @@ export default function CreateOrder() {
         updated.itemName = item.name;
         updated.unitPrice = item.price || 0;
         updated.category = Number(item.category);
-        // Use first available unitType from API
-        const firstUnitType = unitTypes.length > 0 ? unitTypes[0] : "tablet";
-        updated.unitType = firstUnitType;
-        console.log('Auto-setting unitType to:', firstUnitType);
-        console.log('Setting unitType to:', updated.unitType);
-        console.log('Available unitTypes:', unitTypes);
+        // Use the item's actual unitType instead of defaulting to first unitType
+        updated.unitType = item.unitType || "";
+        console.log('Setting unitType from item:', item.unitType);
       }
     }
 
@@ -126,7 +135,7 @@ export default function CreateOrder() {
           quantity: 1,
           unitPrice: 0,
           totalPrice: 0,
-          unitType: unitTypes.length > 0 ? unitTypes[0] : "tablet",
+          unitType: "",
         },
       ],
     }));
@@ -167,16 +176,31 @@ export default function CreateOrder() {
       return toast.error("Please fill all required fields.");
     }
 
+    // Check stock availability
+    const outOfStockItems = form.items.filter((it) => {
+      const item = items.find(i => i._id === it.itemId);
+      return item && (item.stock || 0) < Number(it.quantity);
+    });
+    
+    if (outOfStockItems.length > 0) {
+      const itemNames = outOfStockItems.map(it => it.itemName).join(", ");
+      return toast.error(`Insufficient stock for: ${itemNames}`);
+    }
+
+    console.log('Form items before payload:', form.items);
+    
     const payload = {
       orderNumber: `ORD-${Date.now()}`,
       customerName: form.customerName,
       customerPhone: form.customerPhone,
       subtotal: orderSubtotal,
       totalAmount: orderTotal,
+      discount: form.discount,
+      tax: form.tax,
       items: form.items.map((it) => ({
         itemId: it.itemId,
         itemName: it.itemName,
-        category: Number(it.category),
+        category: it.category,
         quantity: Number(it.quantity),
         unitPrice: Number(it.unitPrice),
         totalPrice: Number(it.totalPrice),
@@ -184,13 +208,40 @@ export default function CreateOrder() {
       })),
     };
 
+    console.log('Payload to send:', JSON.stringify(payload, null, 2));
+
     try {
       setLoading(true);
-      await axios.post("/api/orders", payload);
+      const response = await axios.post("/api/orders", payload);
+      console.log('Order creation response:', response.data);
+      
+      // Update stock for each item in the order
+      for (const item of form.items) {
+        try {
+          const currentItem = items.find(i => i._id === item.itemId);
+          const newStock = Math.max(0, (currentItem?.stock || 0) - Number(item.quantity));
+          
+          console.log(`Updating stock for ${item.itemName}: ${currentItem?.stock} - ${item.quantity} = ${newStock}`);
+          
+          await axios.put(`/api/items/${item.itemId}`, {
+            ...currentItem,
+            stock: newStock,
+            unitQuantity: newStock
+          });
+        } catch (stockError) {
+          console.error('Failed to update stock for item:', item.itemId, stockError);
+        }
+      }
+      
+      // Refetch items to get updated stock levels
+      await fetchItems();
+      
       toast.success("Order created successfully!");
       navigate("/orders");
     } catch (e) {
-      const msg = e?.response?.data?.message || "Failed to create order";
+      console.error('Order creation error:', e);
+      console.error('Error response:', e.response?.data);
+      const msg = e?.response?.data?.message || e?.response?.data?.error || "Failed to create order";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -206,7 +257,8 @@ export default function CreateOrder() {
 
   const itemOptions = filteredItems.map((item) => ({
     value: item._id,
-    label: item.name,
+    label: `${item.name} (Stock: ${item.stock || 0})`,
+    isDisabled: (item.stock || 0) <= 0
   }));
 
   return (
@@ -295,22 +347,12 @@ export default function CreateOrder() {
         </div>
 
         {/* Items */}
+        
         <div className="border-t pt-4">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="font-semibold text-lg">📦 Items</h3>
             <div className="flex items-center gap-3">
+              <h3 className="font-semibold text-lg">📦 Items</h3>
               <div className="bg-gray-100 rounded-lg p-1">
-                <button
-                  type="button"
-                  onClick={() => setCategoryFilter("both")}
-                  className={`px-3 py-1 rounded text-sm ${
-                    categoryFilter === "both"
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-600"
-                  }`}
-                >
-                  Both
-                </button>
                 <button
                   type="button"
                   onClick={() => setCategoryFilter("medical")}
@@ -334,6 +376,34 @@ export default function CreateOrder() {
                   👓 Optical
                 </button>
               </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setForm({
+                    customerName: "",
+                    customerPhone: "",
+                    discount: 0,
+                    tax: 0,
+                    items: [
+                      {
+                        itemId: "",
+                        itemName: "",
+                        category: "",
+                        quantity: 1,
+                        unitPrice: 0,
+                        totalPrice: 0,
+                        unitType: "",
+                      },
+                    ],
+                  });
+                  setError("");
+                }}
+                className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm"
+              >
+                Reset
+              </button>
               <button
                 type="button"
                 onClick={addItemRow}
@@ -347,75 +417,90 @@ export default function CreateOrder() {
           {form.items.map((it, idx) => (
             <div
               key={idx}
-              className="grid grid-cols-1 md:grid-cols-6 gap-3 mb-3 bg-gray-50 p-3 rounded-lg"
+              className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-3 bg-gray-50 p-3 rounded-lg"
             >
-              <Select
-                options={itemOptions}
-                value={
-                  itemOptions.find((opt) => opt.value === it.itemId) || null
-                }
-                onChange={(selected) => updateItem(idx, "itemId", selected?.value)}
-                placeholder="Search Item..."
-                components={{ DropdownIndicator }}
-                className="w-full"
-                isSearchable
-                isClearable
-              />
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Item</label>
+                <Select
+                  options={itemOptions}
+                  value={
+                    itemOptions.find((opt) => opt.value === it.itemId) || null
+                  }
+                  onChange={(selected) => updateItem(idx, "itemId", selected?.value)}
+                  placeholder="Search Item..."
+                  components={{ DropdownIndicator }}
+                  className="w-full"
+                  isSearchable
+                  isClearable
+                />
+              </div>
 
-              <input
-                className="border rounded-lg p-2 bg-gray-100"
-                placeholder="Category"
-                value={categoryMap[it.category] || ""}
-                readOnly
-              />
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Unit</label>
+                <input
+                  className="border rounded-lg p-2 bg-gray-100 w-full"
+                  placeholder="Unit"
+                  value={it.unitType || ""}
+                  readOnly
+                />
+              </div>
 
-              <select
-                value={it.unitType}
-                onChange={(e) => updateItem(idx, "unitType", e.target.value)}
-                className="border rounded-lg p-2"
-                required
-              >
-                <option value="">Select Unit</option>
-                {Array.isArray(unitTypes) &&
-                  unitTypes.map((unitType) => (
-                    <option key={unitType} value={unitType}>
-                      {unitType}
-                    </option>
-                  ))}
-              </select>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Quantity</label>
+                <input
+                  type="number"
+                  min="1"
+                  max={items.find(i => i._id === it.itemId)?.stock || 999}
+                  className={`border rounded-lg p-2 w-full ${
+                    it.itemId && items.find(i => i._id === it.itemId)?.stock < it.quantity
+                      ? "border-red-500 bg-red-50"
+                      : ""
+                  }`}
+                  value={it.quantity}
+                  onChange={(e) => {
+                    const newQty = Number(e.target.value);
+                    const item = items.find(i => i._id === it.itemId);
+                    if (item && newQty > (item.stock || 0)) {
+                      toast.error(`Only ${item.stock || 0} units available for ${item.name}`);
+                    }
+                    updateItem(idx, "quantity", newQty);
+                  }}
+                />
+                {it.itemId && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Available: {items.find(i => i._id === it.itemId)?.stock || 0}
+                  </div>
+                )}
+              </div>
 
-              <input
-                type="number"
-                min="1"
-                className="border rounded-lg p-2"
-                value={it.quantity}
-                onChange={(e) =>
-                  updateItem(idx, "quantity", Number(e.target.value))
-                }
-              />
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Price</label>
+                <input
+                  type="number"
+                  className="border rounded-lg p-2 w-full"
+                  placeholder="Enter unit price"
+                  value={it.unitPrice}
+                  onChange={(e) =>
+                    updateItem(idx, "unitPrice", e.target.value)
+                  }
+                />
+              </div>
 
-              <input
-                type="number"
-                className="border rounded-lg p-2"
-                placeholder="Enter unit price"
-                value={it.unitPrice}
-                onChange={(e) =>
-                  updateItem(idx, "unitPrice", e.target.value)
-                }
-              />
-
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-green-600">
-                  ₹{it.totalPrice}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeItemRow(idx)}
-                  className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
-                  disabled={form.items.length === 1}
-                >
-                  Remove
-                </button>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Total</label>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-green-600">
+                    ₹{it.totalPrice}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeItemRow(idx)}
+                    className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
+                    disabled={form.items.length === 1}
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             </div>
           ))}

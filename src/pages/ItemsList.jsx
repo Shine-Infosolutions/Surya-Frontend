@@ -30,20 +30,23 @@ function ItemsList() {
   const itemsPerPage = 25;
 
   useEffect(() => {
-    console.log('ItemsList mounted, fetching items...');
-    fetchItems(searchTerm);
-    
-    // Refresh when window gains focus (when returning from edit)
-    const handleFocus = () => {
-      console.log('Window focused, fetching items...');
-      fetchItems();
-    };
-    window.addEventListener('focus', handleFocus);
-    
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-    };
+    fetchItems(searchTerm, 1, sortBy, stockFilter);
   }, []);
+  
+  // Search with debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setCurrentPage(1);
+      fetchItems(searchTerm, 1, sortBy, stockFilter);
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
+  
+  // Refetch when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+    fetchItems(searchTerm, 1, sortBy, stockFilter);
+  }, [sortBy, stockFilter]);
 
   // Refresh items when returning from edit
   useEffect(() => {
@@ -63,72 +66,43 @@ function ItemsList() {
 
   // No backend search - using frontend search only
 
-  async function fetchItems(search = '', page = 1) {
+  async function fetchItems(search = '', page = 1, category = 'Both', stock = 'all') {
       try {
         const params = { page, limit: itemsPerPage };
-        // Removed backend search parameter
-        const fullUrl = axios.defaults.baseURL + '/api/items';
-        console.log('Fetching items from:', '/api/items');
-        console.log('Params:', params);
-        console.log('Full URL:', fullUrl);
-        console.log('Axios base URL:', axios.defaults.baseURL);
-        const res = await axios.get('/api/items', { params });
-        console.log('Raw response:', res);
-        console.log('Response data:', res.data);
-        console.log('Data type:', typeof res.data);
-        console.log('Is array:', Array.isArray(res.data));
-        console.log('Complete response data:', JSON.stringify(res.data, null, 2));
         
-        // Extract items from API response structure
-        const data = res.data.data || [];
-        const pagination = {
-          totalPages: Math.ceil((res.data.meta?.total || 0) / (res.data.meta?.limit || 25))
-        };
-        console.log('Extracted items:', data);
-        console.log('Items count:', data.length);
-        console.log('Pagination:', pagination);
-        setItems(data);
-        
-        // Update pagination state from backend
-        if (pagination.totalPages) {
-          setTotalPages(pagination.totalPages);
+        if (search.trim()) {
+          params.name = search.trim();
         }
-        // Always update filteredItems with fresh data from backend
+        
+        if (category !== 'Both') {
+          params.category = category;
+        }
+        
+        const res = await axios.get('/api/paginate/Item', { params });
+        console.log('Items API response:', res.data);
+        
+        const data = res.data.data || res.data.items || [];
+        const paginationData = res.data.pagination || res.data.meta || {};
+        
+        setItems(data);
         setFilteredItems(data);
+        setTotalPages(paginationData.totalPages || Math.ceil((paginationData.total || data.length) / itemsPerPage));
       } catch (err) {
         console.error('Fetch error:', err);
         setItems([]);
+        setFilteredItems([]);
       }
     }
 
-  // Frontend filtering only - no need to refetch on sortBy change
-
+  // Use backend-filtered items directly
   const safeFilteredItems = Array.isArray(filteredItems) ? filteredItems : [];
-  // Filter items by search, category and stock status in frontend
-  const currentItems = safeFilteredItems.filter(item => {
-    // Search filter
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      const nameMatch = item.name?.toLowerCase().includes(searchLower) || false;
-      const descMatch = item.description?.toLowerCase().includes(searchLower) || false;
-      if (!nameMatch && !descMatch) {
-        return false;
-      }
-    }
-    // Category filter
-    if (sortBy === '1' && Number(item.category) !== 1) return false;
-    if (sortBy === '2' && Number(item.category) !== 2) return false;
-    // Stock filter
-    if (stockFilter === 'in_stock') return item.stock > 0;
-    if (stockFilter === 'out_of_stock') return item.stock === 0;
-    return true;
-  });
+  const currentItems = safeFilteredItems;
   // Get totalPages from backend response (will be set in fetchItems)
   const [totalPages, setTotalPages] = useState(1);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
-    fetchItems(searchTerm, page);
+    fetchItems(searchTerm, page, sortBy, stockFilter);
   };
 
 

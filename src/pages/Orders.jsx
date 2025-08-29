@@ -23,7 +23,7 @@ export default function Orders() {
       const params = { page, limit: 25 };
       
       if (searchQuery.trim()) {
-        params.search = searchQuery.trim();
+        params.customerName = searchQuery.trim();
       }
       
       if (category !== 'Both') {
@@ -31,7 +31,7 @@ export default function Orders() {
       }
       
       console.log('Fetching orders with params:', params);
-      const response = await axios.get("/api/orders", { params });
+      const response = await axios.get("/api/paginate/Order", { params });
       console.log('Orders API response:', response.data);
       
       // Handle different response structures
@@ -108,7 +108,7 @@ export default function Orders() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4">
+    <div className="h-full overflow-auto p-6">
       <h3 className="text-3xl font-bold mb-8 text-center text-indigo-700">Orders List</h3>
       
       {/* Search Bar */}
@@ -150,7 +150,7 @@ export default function Orders() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>

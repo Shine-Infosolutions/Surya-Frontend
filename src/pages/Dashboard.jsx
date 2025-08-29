@@ -45,24 +45,26 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
-      const params = {
-        year: selectedYear,
-        category: showCategory
-      };
-      
-      // Fetch widgets data, all items, and orders in parallel
-      const [widgetsResponse, itemsResponse, ordersResponse] = await Promise.all([
-        axios.get('/api/widgets', { params }),
-        axios.get('/api/items', { params: { limit: 1000 } }), // Get all items to count stock
-        axios.get('/api/orders', { params: { limit: 1000 } }) // Get orders for revenue calculation
+      // Fetch items and orders data with proper pagination
+      const [itemsResponse, ordersResponse] = await Promise.all([
+        axios.get('/api/items', { params: { limit: 1000 } }),
+        axios.get('/api/orders', { params: { limit: 1000 } })
       ]);
       
-      const dataArray = widgetsResponse.data;
-      const data = Array.isArray(dataArray) ? dataArray[0] : dataArray;
-      
-      // Get items data and filter by category
+      // Get items data - handle different response structures
       const itemsData = itemsResponse.data;
-      const allItems = itemsData.data || [];
+      let allItems = [];
+      
+      if (Array.isArray(itemsData)) {
+        allItems = itemsData;
+      } else if (itemsData.data && Array.isArray(itemsData.data)) {
+        allItems = itemsData.data;
+      } else if (itemsData.items && Array.isArray(itemsData.items)) {
+        allItems = itemsData.items;
+      }
+      
+      console.log('Items API Response:', itemsData);
+      console.log('All Items:', allItems);
       
       // Filter items based on selected category
       let filteredItems = allItems;
@@ -73,39 +75,80 @@ const Dashboard = () => {
       }
       
       const totalItems = filteredItems.length;
-      const noStockItems = filteredItems.filter(item => item.stock === 0).length;
+      const noStockItems = filteredItems.filter(item => (item.stock || 0) === 0).length;
       
-      // Calculate total revenue from orders and get total count
+      // Get orders data - API returns data in 'data' array
       const ordersData = ordersResponse.data;
-      const allOrders = ordersData.data || ordersData.orders || [];
+      const allOrders = ordersData.data || [];
+      
+      console.log('Orders API Response:', ordersData);
+      console.log('All Orders:', allOrders);
+      console.log('Orders count:', allOrders.length);
       
       // Filter orders based on selected category
       let filteredOrders = allOrders;
       if (showCategory === 'medical') {
         filteredOrders = allOrders.filter(order => 
-          order.items && order.items.some(item => Number(item.category) === 1)
+          order.items && order.items.some(item => String(item.category) === '1')
         );
       } else if (showCategory === 'optical') {
         filteredOrders = allOrders.filter(order => 
-          order.items && order.items.some(item => Number(item.category) === 2)
+          order.items && order.items.some(item => String(item.category) === '2')
         );
       }
       
-      const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+      const totalRevenue = filteredOrders.reduce((sum, order) => {
+        const amount = Number(order.totalAmount) || 0;
+        return sum + amount;
+      }, 0);
       const totalOrders = filteredOrders.length;
       
-      console.log('Dashboard data fetched:', data);
+      console.log('Category filter:', showCategory);
+      console.log('Filtered orders:', filteredOrders.length);
+      console.log('Sample order items:', filteredOrders[0]?.items);
+      
+      // Calculate monthly sales for current year
+      const currentYear = selectedYear;
+      const monthlySales = new Array(12).fill(0);
+      const yearlyRevenue = new Array(5).fill(0);
+      
+      filteredOrders.forEach(order => {
+        if (!order.createdAt) return;
+        
+        const orderDate = new Date(order.createdAt);
+        if (isNaN(orderDate.getTime())) return; // Invalid date
+        
+        const orderYear = orderDate.getFullYear();
+        const orderMonth = orderDate.getMonth();
+        
+        // Monthly sales for selected year (count orders, not units)
+        if (orderYear === currentYear) {
+          monthlySales[orderMonth] += 1; // Count orders instead of units
+        }
+        
+        // Yearly revenue for last 5 years
+        const currentYearNow = new Date().getFullYear();
+        const yearIndex = orderYear - (currentYearNow - 4);
+        if (yearIndex >= 0 && yearIndex < 5) {
+          const revenue = Number(order.totalAmount) || 0;
+          yearlyRevenue[yearIndex] += revenue;
+        }
+      });
+      
+      console.log('Dashboard data calculated:');
       console.log('Total items:', totalItems);
       console.log('No stock items:', noStockItems);
-      
-      // Extract monthly sales units from the array of objects
-      const monthlySalesData = data?.monthlySales ? 
-        data.monthlySales.map(month => month.units || 0) : [];
+      console.log('Total orders:', totalOrders);
+      console.log('Total revenue:', totalRevenue);
+      console.log('Monthly sales:', monthlySales);
+      console.log('Yearly revenue:', yearlyRevenue);
+      console.log('Filtered items:', filteredItems.length);
+      console.log('Filtered orders:', filteredOrders.length);
       
       setDashboardData({
-        monthlySales: monthlySalesData,
-        yearlyRevenue: data.yearlyRevenue ? [0, 0, 0, 0, data.yearlyRevenue] : [0, 0, 0, 0, 0],
-        stockLevels: data.stockLevels || [],
+        monthlySales: monthlySales,
+        yearlyRevenue: yearlyRevenue,
+        stockLevels: [],
         totalOrders: totalOrders,
         totalRevenue: totalRevenue,
         noStockItems: noStockItems,
@@ -116,8 +159,8 @@ const Dashboard = () => {
       console.error('Error fetching dashboard data:', error);
       // Fallback to empty data on error
       setDashboardData({
-        monthlySales: [],
-        yearlyRevenue: [],
+        monthlySales: new Array(12).fill(0),
+        yearlyRevenue: new Array(5).fill(0),
         stockLevels: [],
         totalOrders: 0,
         totalRevenue: 0,
@@ -262,7 +305,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-lg">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Monthly Sales (Units)</h3>
+            <h3 className="text-lg font-semibold">Monthly Orders</h3>
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
@@ -276,7 +319,7 @@ const Dashboard = () => {
           <Bar data={{
             labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
             datasets: [{
-              label: `Monthly Sales (${selectedYear})`,
+              label: `Monthly Orders (${selectedYear})`,
               data: dashboardData.monthlySales,
               backgroundColor: 'rgba(59, 130, 246, 0.8)',
               borderColor: 'rgba(59, 130, 246, 1)',
