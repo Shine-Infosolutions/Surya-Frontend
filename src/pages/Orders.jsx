@@ -129,46 +129,46 @@ export default function Orders() {
   };
 
   return (
-    <div className="h-full overflow-auto p-6">
-      <h3 className="text-3xl font-bold mb-8 text-center text-indigo-700">
+    <div className="h-full overflow-auto p-3 md:p-6">
+      <h3 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-center text-indigo-700">
         Orders List
       </h3>
 
       {/* Search Bar */}
-      <div className="mb-6">
+      <div className="mb-4 md:mb-6">
         <input
           type="text"
-          placeholder="Search orders by customer name, phone, or order number..."
+          placeholder="Search orders..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
             setPagination((p) => ({ ...p, currentPage: 1 }));
           }}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 md:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
         />
       </div>
 
-      <div className="flex justify-between mb-6">
+      <div className="flex flex-col sm:flex-row justify-between gap-4 mb-4 md:mb-6">
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-700">Filter by:</label>
+          <label className="text-xs md:text-sm font-medium text-gray-700">Filter:</label>
           <select
             value={categoryFilter}
             onChange={(e) => {
               setCategoryFilter(e.target.value);
               setPagination((p) => ({ ...p, currentPage: 1 }));
             }}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-2 md:px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs md:text-sm"
           >
             <option value="Both">Both</option>
-            <option value="Surya Medical">Surya Medical</option>
-            <option value="Surya Optical">Surya Optical</option>
+            <option value="Surya Medical">Medical</option>
+            <option value="Surya Optical">Optical</option>
           </select>
         </div>
         <button
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+          className="bg-blue-600 text-white px-4 md:px-6 py-2 rounded-lg hover:bg-blue-700 text-sm md:text-base"
           onClick={() => navigate("/orders/create")}
         >
-          Create Order
+          + Create
         </button>
       </div>
 
@@ -179,7 +179,8 @@ export default function Orders() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-x-auto">
+      {/* Desktop Table */}
+      <div className="hidden md:block bg-white rounded-lg shadow overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -262,7 +263,6 @@ export default function Orders() {
                 </td>
               </tr>
             ))}
-
             {paginatedOrders.length === 0 && !loading && (
               <tr>
                 <td colSpan="8" className="px-6 py-4 text-center text-gray-500">
@@ -274,35 +274,103 @@ export default function Orders() {
         </table>
       </div>
 
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-4">
+        {paginatedOrders.map((order) => (
+          <div key={order._id} className="bg-white rounded-lg shadow p-4">
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <div className="font-medium text-gray-900 text-sm">
+                  #{order.invoiceNumber
+                    ? order.invoiceNumber.replace("INV-", "")
+                    : order.orderNumber || order._id}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {order.createdAt
+                    ? new Date(order.createdAt).toLocaleDateString()
+                    : "N/A"}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-bold text-green-600 text-sm">
+                  ₹{Number(order.totalAmount || 0).toFixed(2)}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {getCategoryDisplay(order)}
+                </div>
+              </div>
+            </div>
+            
+            <div className="mb-3">
+              <div className="text-sm font-medium text-gray-900">{order.customerName}</div>
+              <div className="text-xs text-gray-500">{order.customerPhone}</div>
+            </div>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={() => viewInvoice(order._id)}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded text-xs"
+              >
+                View
+              </button>
+              <button
+                onClick={() => navigate(`/orders/edit/${order._id}`)}
+                className="flex-1 bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600 text-xs"
+              >
+                Edit
+              </button>
+              {userRole === 1 && (
+                <button
+                  onClick={() => handleDelete(order._id)}
+                  className="flex-1 bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600 text-xs"
+                >
+                  Delete
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {paginatedOrders.length === 0 && !loading && (
+        <div className="md:hidden text-center py-8 text-gray-500">
+          No orders found.
+        </div>
+      )}
+
       {/* Pagination */}
       {filteredOrders.length > 0 && (
-        <div className="flex justify-center items-center mt-6 gap-2">
+        <div className="flex justify-center items-center mt-4 md:mt-6 gap-1 md:gap-2">
           <button
             onClick={() => pagination.hasPrevPage && paginate(pagination.currentPage - 1)}
             disabled={!pagination.hasPrevPage}
-            className="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-2 md:px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-sm"
           >
-            Previous
+            Prev
           </button>
 
-          {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((page) => (
-            <button
-              key={page}
-              onClick={() => paginate(page)}
-              className={`px-3 py-2 rounded ${
-                pagination.currentPage === page
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              }`}
-            >
-              {page}
-            </button>
-          ))}
+          {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
+            const page = i + Math.max(1, pagination.currentPage - 2);
+            if (page > pagination.totalPages) return null;
+            return (
+              <button
+                key={page}
+                onClick={() => paginate(page)}
+                className={`px-2 md:px-3 py-2 rounded text-xs md:text-sm ${
+                  pagination.currentPage === page
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                {page}
+              </button>
+            );
+          })}
 
           <button
             onClick={() => pagination.hasNextPage && paginate(pagination.currentPage + 1)}
             disabled={!pagination.hasNextPage}
-            className="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-2 md:px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-sm"
           >
             Next
           </button>
@@ -311,8 +379,8 @@ export default function Orders() {
 
       {/* Orders count */}
       {filteredOrders.length > 0 && (
-        <div className="text-center mt-4 text-sm text-gray-600">
-          Showing {paginatedOrders.length} of {filteredOrders.length} filtered orders
+        <div className="text-center mt-3 md:mt-4 text-xs md:text-sm text-gray-600">
+          Showing {paginatedOrders.length} of {filteredOrders.length} orders
         </div>
       )}
     </div>

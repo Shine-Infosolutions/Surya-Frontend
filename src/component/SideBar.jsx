@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
-import { Home, FileText, ShoppingCart, Package, AlertTriangle, LogOut } from "lucide-react";
+import { Home, FileText, ShoppingCart, Package, AlertTriangle, LogOut, Menu, X } from "lucide-react";
 import { useAppContext } from "../context/AppContext"; // Apne context ka path adjust karna
 
 const SideBar = () => {
