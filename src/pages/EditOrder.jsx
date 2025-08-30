@@ -230,16 +230,16 @@ function EditOrder() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto">
-      <div className="flex items-center gap-3 mb-4">
+    <div className="p-3 md:p-8 max-w-5xl mx-auto">
+      <div className="flex items-center gap-2 md:gap-3 mb-4">
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+          className="flex items-center gap-1 md:gap-2 text-gray-700 hover:text-gray-900 text-sm md:text-base"
         >
-          <ArrowLeft size={18} /> Back
+          <ArrowLeft size={16} className="md:w-[18px] md:h-[18px]" /> Back
         </button>
-        <h1 className="text-2xl font-bold text-gray-800">✏️ Edit Order</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-800">✏️ Edit Order</h1>
       </div>
 
       {error && (
@@ -248,16 +248,16 @@ function EditOrder() {
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white shadow-lg rounded-2xl p-6 space-y-6"
+        className="bg-white shadow-lg rounded-2xl p-4 md:p-6 space-y-4 md:space-y-6"
       >
         {/* Customer Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-gray-600 mb-1">
+            <label className="text-xs md:text-sm font-medium text-gray-600 mb-1 block">
               Customer Name
             </label>
             <input
-              className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none w-full"
+              className="border rounded-lg p-2 md:p-3 focus:ring-2 focus:ring-blue-500 outline-none w-full text-sm md:text-base"
               placeholder="Customer Name *"
               value={form.customerName}
               onChange={(e) =>
@@ -267,13 +267,13 @@ function EditOrder() {
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-600 mb-1">
+            <label className="text-xs md:text-sm font-medium text-gray-600 mb-1 block">
               Customer Phone
             </label>
             <input
               type="text"
               inputMode="numeric"
-              className="border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none w-full"
+              className="border rounded-lg p-2 md:p-3 focus:ring-2 focus:ring-blue-500 outline-none w-full text-sm md:text-base"
               placeholder="Customer Phone *"
               value={form.customerPhone}
               onChange={(e) => {
@@ -289,11 +289,11 @@ function EditOrder() {
         {/* Discount & Tax */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm text-gray-600">Discount %</label>
+            <label className="text-xs md:text-sm text-gray-600 block mb-1">Discount %</label>
             <input
               type="number"
               min="0"
-              className="border rounded-lg p-3 w-full focus:ring-2 focus:ring-green-500 outline-none"
+              className="border rounded-lg p-2 md:p-3 w-full focus:ring-2 focus:ring-green-500 outline-none text-sm md:text-base"
               value={form.discount}
               onChange={(e) =>
                 setForm((f) => ({ ...f, discount: Number(e.target.value) }))
@@ -301,11 +301,11 @@ function EditOrder() {
             />
           </div>
           <div>
-            <label className="text-sm text-gray-600">Tax %</label>
+            <label className="text-xs md:text-sm text-gray-600 block mb-1">Tax %</label>
             <input
               type="number"
               min="0"
-              className="border rounded-lg p-3 w-full focus:ring-2 focus:ring-green-500 outline-none"
+              className="border rounded-lg p-2 md:p-3 w-full focus:ring-2 focus:ring-green-500 outline-none text-sm md:text-base"
               value={form.tax}
               onChange={(e) =>
                 setForm((f) => ({ ...f, tax: Number(e.target.value) }))
@@ -316,12 +316,12 @@ function EditOrder() {
 
         {/* Items */}
         <div className="border-t pt-4">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="font-semibold text-lg">📦 Items</h3>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
+            <h3 className="font-semibold text-base md:text-lg">📦 Items</h3>
             <button
               type="button"
               onClick={addItemRow}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm w-full sm:w-auto"
             >
               + Add Item
             </button>
@@ -330,7 +330,7 @@ function EditOrder() {
           {form.items.map((it, idx) => (
             <div
               key={idx}
-              className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-3 bg-gray-50 p-3 rounded-lg"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 md:gap-3 mb-3 bg-gray-50 p-3 rounded-lg"
             >
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Item</label>
@@ -349,7 +349,7 @@ function EditOrder() {
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Unit</label>
                 <input
-                  className="border rounded-lg p-2 bg-gray-100 w-full"
+                  className="border rounded-lg p-2 bg-gray-100 w-full text-xs md:text-sm"
                   placeholder="Unit"
                   value={it.unitType || ""}
                   readOnly
@@ -361,7 +361,7 @@ function EditOrder() {
                 <input
                   type="number"
                   min="1"
-                  className="border rounded-lg p-2 w-full"
+                  className="border rounded-lg p-2 w-full text-xs md:text-sm"
                   value={it.quantity}
                   onChange={(e) =>
                     updateItem(idx, "quantity", Number(e.target.value))
@@ -373,7 +373,7 @@ function EditOrder() {
                 <label className="text-xs text-gray-500 mb-1 block">Price</label>
                 <input
                   type="number"
-                  className="border rounded-lg p-2 w-full"
+                  className="border rounded-lg p-2 w-full text-xs md:text-sm"
                   placeholder="Enter unit price"
                   value={it.unitPrice}
                   onChange={(e) => updateItem(idx, "unitPrice", e.target.value)}
@@ -382,14 +382,14 @@ function EditOrder() {
 
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Total</label>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-green-600">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                  <span className="font-medium text-green-600 text-sm md:text-base">
                     ₹{it.totalPrice}
                   </span>
                   <button
                     type="button"
                     onClick={() => removeItemRow(idx)}
-                    className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
+                    className="text-xs bg-red-500 hover:bg-red-600 text-white px-2 md:px-3 py-1 rounded-lg w-full sm:w-auto"
                     disabled={form.items.length === 1}
                   >
                     Remove
@@ -401,32 +401,34 @@ function EditOrder() {
         </div>
 
         {/* Summary */}
-        <div className="flex flex-col md:flex-row justify-end gap-6 pt-4 border-t">
-          <div>
-            Subtotal: <b>₹{orderSubtotal}</b>
-          </div>
-          <div>
-            Discount ({form.discount}%): {" "}
-            <b>-₹{Math.round((orderSubtotal * form.discount) / 100)}</b>
-          </div>
-          <div>
-            Tax ({form.tax}%): {" "}
-            <b>
-              +₹
-              {Math.round(
-                ((orderSubtotal - (orderSubtotal * form.discount) / 100) *
-                  form.tax) /
-                  100
-              )}
-            </b>
-          </div>
-          <div>
-            Total: {" "}
-            <b className="text-lg text-emerald-600">₹{orderTotal}</b>
+        <div className="flex flex-col gap-3 md:gap-6 pt-4 border-t">
+          <div className="grid grid-cols-2 md:flex md:justify-end gap-3 md:gap-6 text-sm md:text-base">
+            <div>
+              Subtotal: <b>₹{orderSubtotal}</b>
+            </div>
+            <div>
+              Discount ({form.discount}%): {" "}
+              <b>-₹{Math.round((orderSubtotal * form.discount) / 100)}</b>
+            </div>
+            <div>
+              Tax ({form.tax}%): {" "}
+              <b>
+                +₹
+                {Math.round(
+                  ((orderSubtotal - (orderSubtotal * form.discount) / 100) *
+                    form.tax) /
+                    100
+                )}
+              </b>
+            </div>
+            <div className="col-span-2 md:col-span-1">
+              Total: {" "}
+              <b className="text-lg md:text-xl text-emerald-600">₹{orderTotal}</b>
+            </div>
           </div>
           <button
             type="submit"
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg shadow-md"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg shadow-md text-sm md:text-base w-full md:w-auto md:self-end"
           >
             Update Order
           </button>

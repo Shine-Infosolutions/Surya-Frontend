@@ -185,18 +185,7 @@ function EditItemPage() {
               ))}
             </select>
           </div>
-          <div>
-            <label className="flex items-center gap-2 mt-6">
-              <input
-                type="checkbox"
-                name="is_oos"
-                checked={formData.is_oos}
-                onChange={(e) => setFormData(prev => ({ ...prev, is_oos: e.target.checked }))}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm font-medium text-gray-600">Out of Stock</span>
-            </label>
-          </div>
+
         </div>
         
         <div>

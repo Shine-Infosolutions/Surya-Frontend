@@ -22,12 +22,42 @@ export default function Orders() {
   });
   const pageSize = 25; // per page records
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (page = 1, searchTerm = "") => {
     try {
       setLoading(true);
-      const response = await axios.get("/api/paginate/Order"); // fetch all orders only
+      const params = {
+        page,
+        limit: pageSize,
+      };
+      
+      // Add search parameters if provided
+      if (searchTerm.trim()) {
+        // Check if search term looks like a phone number
+        if (/^\d+$/.test(searchTerm.trim())) {
+          params.customerPhone = searchTerm.trim();
+        }
+        // Check if search term looks like order number
+        else if (searchTerm.trim().toUpperCase().includes('ORD')) {
+          params.orderNumber = searchTerm.trim();
+        }
+        // Otherwise search by customer name
+        else {
+          params.customerName = searchTerm.trim();
+        }
+      }
+      
+      const response = await axios.get("/api/paginate/Order", { params });
       const ordersData = response.data.orders || response.data.data || [];
+      const paginationData = response.data.pagination || response.data.meta || {};
+      
       setOrders(ordersData);
+      setPagination({
+        currentPage: page,
+        totalPages: paginationData.totalPages || 1,
+        totalOrders: paginationData.total || ordersData.length,
+        hasNextPage: paginationData.hasNextPage || false,
+        hasPrevPage: paginationData.hasPrevPage || false,
+      });
     } catch (err) {
       console.error("Failed to fetch orders:", err);
       toast.error("Failed to load orders");
@@ -54,10 +84,18 @@ export default function Orders() {
   };
 
   useEffect(() => {
-    fetchOrders();
+    fetchOrders(1, search);
   }, []);
+  
+  // Debounced search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchOrders(1, search);
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [search]);
 
-  // 🔥 Apply search + filter frontend me
+  // 🔥 Apply category filter frontend me (search handled by backend)
   const filteredOrders = useMemo(() => {
     let filtered = [...orders];
 
@@ -72,42 +110,13 @@ export default function Orders() {
       });
     }
 
-    // Search by name / phone / orderNumber
-    if (search.trim()) {
-      const lower = search.toLowerCase();
-      filtered = filtered.filter(
-        (order) =>
-          order.customerName?.toLowerCase().includes(lower) ||
-          order.customerPhone?.toLowerCase().includes(lower) ||
-          order.orderNumber?.toLowerCase().includes(lower) ||
-          order.invoiceNumber?.toLowerCase().includes(lower)
-      );
-    }
-
     return filtered;
-  }, [orders, search, categoryFilter]);
+  }, [orders, categoryFilter]);
 
-  // 🔥 Pagination frontend me
-  const paginatedOrders = useMemo(() => {
-    const total = filteredOrders.length;
-    const totalPages = Math.ceil(total / pageSize) || 1;
-    const start = (pagination.currentPage - 1) * pageSize;
-    const end = start + pageSize;
-    const data = filteredOrders.slice(start, end);
-
-    setPagination((prev) => ({
-      ...prev,
-      totalOrders: total,
-      totalPages,
-      hasPrevPage: pagination.currentPage > 1,
-      hasNextPage: pagination.currentPage < totalPages,
-    }));
-
-    return data;
-  }, [filteredOrders, pagination.currentPage]);
+  const paginatedOrders = filteredOrders;
 
   const paginate = (pageNumber) => {
-    setPagination((prev) => ({ ...prev, currentPage: pageNumber }));
+    fetchOrders(pageNumber, search);
   };
 
   const getCategoryDisplay = (order) => {
@@ -142,7 +151,6 @@ export default function Orders() {
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
-            setPagination((p) => ({ ...p, currentPage: 1 }));
           }}
           className="w-full px-3 md:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
         />
@@ -155,7 +163,6 @@ export default function Orders() {
             value={categoryFilter}
             onChange={(e) => {
               setCategoryFilter(e.target.value);
-              setPagination((p) => ({ ...p, currentPage: 1 }));
             }}
             className="px-2 md:px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs md:text-sm"
           >
@@ -339,7 +346,7 @@ export default function Orders() {
       )}
 
       {/* Pagination */}
-      {filteredOrders.length > 0 && (
+      {pagination.totalOrders > 0 && (
         <div className="flex justify-center items-center mt-4 md:mt-6 gap-1 md:gap-2">
           <button
             onClick={() => pagination.hasPrevPage && paginate(pagination.currentPage - 1)}
@@ -378,9 +385,9 @@ export default function Orders() {
       )}
 
       {/* Orders count */}
-      {filteredOrders.length > 0 && (
+      {pagination.totalOrders > 0 && (
         <div className="text-center mt-3 md:mt-4 text-xs md:text-sm text-gray-600">
-          Showing {paginatedOrders.length} of {filteredOrders.length} orders
+          Showing {paginatedOrders.length} of {pagination.totalOrders} orders
         </div>
       )}
     </div>

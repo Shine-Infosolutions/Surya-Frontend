@@ -245,31 +245,31 @@ export default function InvoiceViewer() {
         }
       `}</style>
       
-      <div className="min-h-screen bg-gray-50 py-4 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gray-50 py-2 md:py-4 px-2 md:px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           {/* Action Buttons */}
-          <div className="flex flex-wrap gap-2 mb-6 justify-center sm:justify-start no-print">
-            <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 mb-4 md:mb-6 no-print">
+            <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm flex items-center justify-center gap-2">
               🖨️ Print
             </button>
-            <button onClick={handleDownload} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2">
+            <button onClick={handleDownload} className="bg-green-600 hover:bg-green-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm flex items-center justify-center gap-2">
               📥 Download PDF
             </button>
-            <button onClick={handleSend} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2">
+            <button onClick={handleSend} className="bg-green-600 hover:bg-green-700 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm flex items-center justify-center gap-2">
               📱 Download & Send WhatsApp
             </button>
           </div>
 
           {/* Invoice */}
           <div className="bg-white shadow-lg rounded-lg overflow-hidden print-area">
-            <div ref={printRef} className="p-8">
+            <div ref={printRef} className="p-3 md:p-8">
               {/* Header */}
-              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px'}}>
-                <div style={{fontSize: '48px', fontWeight: 'bold', color: '#2563eb'}}>SA</div>
-                <div style={{textAlign: 'right'}}>
-                  <h1 style={{fontSize: '24px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px'}}>Hospital Invoice</h1>
+              <div className="flex flex-col md:flex-row justify-between items-start mb-6 md:mb-8">
+                <div className="text-3xl md:text-5xl font-bold text-blue-600 mb-4 md:mb-0">SA</div>
+                <div className="text-left md:text-right w-full md:w-auto">
+                  <h1 className="text-lg md:text-2xl font-bold text-gray-800 mb-2">Hospital Invoice</h1>
                   
-                  <div style={{fontSize: '14px', color: '#4b5563', marginTop: '16px'}}>
+                  <div className="text-xs md:text-sm text-gray-600 space-y-1">
                     <div>Invoice no.: {invoice.invoiceNumber || invoice.orderNumber || invoice._id}</div>
                     <div>Invoice date: {formatIST(invoice.createdAt || invoice.date)}</div>
                     <div>Due: {formatIST(invoice.createdAt || invoice.date)}</div>
@@ -277,66 +277,96 @@ export default function InvoiceViewer() {
                 </div>
               </div>
               {/* Company Info */}
-              <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '32px'}}>
-                <div style={{flex: '1', marginRight: '32px'}}>
-                  <div style={{fontWeight: 'bold', color: '#1f2937'}}>Surya Medical And Optical</div>
-                  <div style={{fontSize: '14px', color: '#4b5563'}}>
+              <div className="flex flex-col md:flex-row justify-between mb-6 md:mb-8 gap-4">
+                <div className="flex-1">
+                  <div className="font-bold text-gray-800 text-sm md:text-base">Surya Medical And Optical</div>
+                  <div className="text-xs md:text-sm text-gray-600 mt-1">
                     <div>Dr. Chaturvedi</div>
                     <div>suryamedical.com</div>
                     <div>9234679597</div>
                   </div>
                 </div>
                 
-                <div style={{marginLeft: 'auto'}}>
-                  <div style={{fontWeight: 'bold', color: '#1f2937', marginBottom: '8px'}}>Bill to</div>
-                  <div style={{fontWeight: 'bold', color: '#1f2937'}}>{invoice.customerName}</div>
-                  <div style={{fontSize: '14px', color: '#4b5563'}}>
+                <div className="md:text-right">
+                  <div className="font-bold text-gray-800 mb-2 text-sm md:text-base">Bill to</div>
+                  <div className="font-bold text-gray-800 text-sm md:text-base">{invoice.customerName}</div>
+                  <div className="text-xs md:text-sm text-gray-600">
                     <div>{invoice.customerPhone}</div>
                   </div>
                 </div>
               </div>
-              {/* Items Table */}
-              <table className="items-table w-full mb-8" style={{borderCollapse: 'collapse', border: '1px solid #ddd'}}>
-                <thead>
-                  <tr>
-                    <th style={{border: '1px solid #ddd', background: '#2563eb', color: 'white', padding: '12px', textAlign: 'left', fontSize: '12px', textTransform: 'uppercase'}}>Description</th>
-                    <th style={{border: '1px solid #ddd', background: '#2563eb', color: 'white', padding: '12px', textAlign: 'center', fontSize: '12px', textTransform: 'uppercase'}}>Unit</th>
-                    <th style={{border: '1px solid #ddd', background: '#2563eb', color: 'white', padding: '12px', textAlign: 'center', fontSize: '12px', textTransform: 'uppercase'}}>Rate</th>
-                    <th style={{border: '1px solid #ddd', background: '#2563eb', color: 'white', padding: '12px', textAlign: 'center', fontSize: '12px', textTransform: 'uppercase'}}>QTY</th>
-                    <th style={{border: '1px solid #ddd', background: '#2563eb', color: 'white', padding: '12px', textAlign: 'right', fontSize: '12px', textTransform: 'uppercase'}}>Amount (INR)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoice.items?.map((item, idx) => (
-                    <tr key={idx}>
-                      <td style={{border: '1px solid #ddd', padding: '12px'}}>
-                        <div style={{fontWeight: '500'}}>{item.itemName}</div>
-                        <div style={{fontSize: '14px', color: '#4b5563'}}>
-                          {categoryMap[item.category] || categoryMap[Number(item.category)] || item.category || "Medical Item"}
-                        </div>
-                      </td>
-                      <td style={{border: '1px solid #ddd', padding: '12px', textAlign: 'center'}}>{item.unitType || 'piece'}</td>
-                      <td style={{border: '1px solid #ddd', padding: '12px', textAlign: 'center'}}>₹{item.unitPrice}</td>
-                      <td style={{border: '1px solid #ddd', padding: '12px', textAlign: 'center'}}>{item.quantity}</td>
-                      <td style={{border: '1px solid #ddd', padding: '12px', textAlign: 'right', fontWeight: '500'}}>₹{Number(item.totalPrice || 0).toFixed(2)}</td>
+              {/* Items Table - Desktop */}
+              <div className="hidden md:block overflow-x-auto mb-6">
+                <table className="items-table w-full" style={{borderCollapse: 'collapse', border: '1px solid #ddd'}}>
+                  <thead>
+                    <tr>
+                      <th style={{border: '1px solid #ddd', background: '#2563eb', color: 'white', padding: '12px', textAlign: 'left', fontSize: '12px', textTransform: 'uppercase'}}>Description</th>
+                      <th style={{border: '1px solid #ddd', background: '#2563eb', color: 'white', padding: '12px', textAlign: 'center', fontSize: '12px', textTransform: 'uppercase'}}>Unit</th>
+                      <th style={{border: '1px solid #ddd', background: '#2563eb', color: 'white', padding: '12px', textAlign: 'center', fontSize: '12px', textTransform: 'uppercase'}}>Rate</th>
+                      <th style={{border: '1px solid #ddd', background: '#2563eb', color: 'white', padding: '12px', textAlign: 'center', fontSize: '12px', textTransform: 'uppercase'}}>QTY</th>
+                      <th style={{border: '1px solid #ddd', background: '#2563eb', color: 'white', padding: '12px', textAlign: 'right', fontSize: '12px', textTransform: 'uppercase'}}>Amount (INR)</th>
                     </tr>
+                  </thead>
+                  <tbody>
+                    {invoice.items?.map((item, idx) => (
+                      <tr key={idx}>
+                        <td style={{border: '1px solid #ddd', padding: '12px'}}>
+                          <div style={{fontWeight: '500'}}>{item.itemName}</div>
+                          <div style={{fontSize: '14px', color: '#4b5563'}}>
+                            {categoryMap[item.category] || categoryMap[Number(item.category)] || item.category || "Medical Item"}
+                          </div>
+                        </td>
+                        <td style={{border: '1px solid #ddd', padding: '12px', textAlign: 'center'}}>{item.unitType || 'piece'}</td>
+                        <td style={{border: '1px solid #ddd', padding: '12px', textAlign: 'center'}}>₹{item.unitPrice}</td>
+                        <td style={{border: '1px solid #ddd', padding: '12px', textAlign: 'center'}}>{item.quantity}</td>
+                        <td style={{border: '1px solid #ddd', padding: '12px', textAlign: 'right', fontWeight: '500'}}>₹{Number(item.totalPrice || 0).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Items Cards - Mobile */}
+              <div className="md:hidden mb-6">
+                <div className="bg-blue-600 text-white p-3 rounded-t-lg">
+                  <h3 className="font-bold text-sm">Items</h3>
+                </div>
+                <div className="border border-t-0 rounded-b-lg">
+                  {invoice.items?.map((item, idx) => (
+                    <div key={idx} className="p-3 border-b last:border-b-0">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">{item.itemName}</div>
+                          <div className="text-xs text-gray-600">
+                            {categoryMap[item.category] || categoryMap[Number(item.category)] || item.category || "Medical Item"}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-sm">₹{Number(item.totalPrice || 0).toFixed(2)}</div>
+                        </div>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-600">
+                        <span>{item.unitType || 'piece'} × {item.quantity}</span>
+                        <span>₹{item.unitPrice} each</span>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </div>
 
               {/* Totals Section */}
-              <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '32px'}}>
-                <div style={{flex: '1', marginRight: '40px'}}>
-                  <div style={{fontWeight: 'bold', color: '#1f2937', marginBottom: '8px'}}>Payment instruction</div>
-                  <div style={{fontSize: '14px', color: '#4b5563', marginBottom: '16px'}}>
+              <div className="flex flex-col md:flex-row justify-between gap-6 mt-6">
+                <div className="flex-1 order-2 md:order-1">
+                  <div className="font-bold text-gray-800 mb-2 text-sm md:text-base">Payment instruction</div>
+                  <div className="text-xs md:text-sm text-gray-600 mb-4">
                     <div>Scan QR Code for Payment</div>
-                    <div style={{marginTop: '8px', padding: '16px', border: '1px solid #d1d5db', display: 'inline-block'}}>
-                      <div style={{width: '80px', height: '80px', background: '#000', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px'}}>
+                    <div className="mt-2 p-3 border border-gray-300 inline-block">
+                      <div className="w-16 h-16 md:w-20 md:h-20 bg-black text-white flex items-center justify-center text-xs">
                         QR CODE
                       </div>
                     </div>
                   </div>
-                  <div style={{fontSize: '14px', color: '#4b5563'}}>
+                  <div className="text-xs md:text-sm text-gray-600 space-y-1">
                     <div>UPI ID: suryaapps@paytm</div>
                     <div>Account: 1234567890</div>
                     <div>Branch:HDFC Bank</div>
@@ -344,38 +374,40 @@ export default function InvoiceViewer() {
                   </div>
                 </div>
 
-                <div style={{flex: '1', maxWidth: '300px'}}>
-                  <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '14px', margin: '5px 0'}}>
-                    <span>Subtotal:</span>
-                    <span>₹{Number(invoice.subtotal || 0).toFixed(2)}</span>
-                  </div>
-                  <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '14px', margin: '5px 0'}}>
-                    <span>Discount ({invoice.discount || 0}%):</span>
-                    <span>-₹{Number((invoice.subtotal * (invoice.discount || 0)) / 100 || 0).toFixed(2)}</span>
-                  </div>
-                  <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '14px', margin: '5px 0'}}>
-                    <span>Tax ({invoice.tax || 0}%):</span>
-                    <span>+₹{Number(((invoice.subtotal - (invoice.subtotal * (invoice.discount || 0)) / 100) * (invoice.tax || 0)) / 100 || 0).toFixed(2)}</span>
-                  </div>
-                  <div style={{display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px', borderTop: '1px solid #333', paddingTop: '10px', marginTop: '10px'}}>
-                    <span>Grand Total</span>
-                    <span>₹{Number(invoice.totalAmount || 0).toFixed(2)}</span>
+                <div className="flex-1 max-w-full md:max-w-xs order-1 md:order-2">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs md:text-sm">
+                      <span>Subtotal:</span>
+                      <span>₹{Number(invoice.subtotal || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs md:text-sm">
+                      <span>Discount ({invoice.discount || 0}%):</span>
+                      <span>-₹{Number((invoice.subtotal * (invoice.discount || 0)) / 100 || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs md:text-sm">
+                      <span>Tax ({invoice.tax || 0}%):</span>
+                      <span>+₹{Number(((invoice.subtotal - (invoice.subtotal * (invoice.discount || 0)) / 100) * (invoice.tax || 0)) / 100 || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-sm md:text-lg border-t border-gray-800 pt-2 mt-2">
+                      <span>Grand Total</span>
+                      <span>₹{Number(invoice.totalAmount || 0).toFixed(2)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Notes */}
-              <div style={{marginTop: '32px'}}>
-                <div style={{fontWeight: 'bold', color: '#1f2937', marginBottom: '8px'}}>Notes</div>
-                <div style={{fontSize: '14px', color: '#4b5563'}}>
+              <div className="mt-6">
+                <div className="font-bold text-gray-800 mb-2 text-sm md:text-base">Notes</div>
+                <div className="text-xs md:text-sm text-gray-600">
                   Thank you for choosing our medical services. For any queries, please contact us at the above details.
                 </div>
               </div>
 
               {/* Signature */}
-              <div style={{textAlign: 'right', marginTop: '48px'}}>
-                <div style={{borderBottom: '1px solid #9ca3af', width: '200px', marginLeft: 'auto', marginBottom: '8px'}}></div>
-                <div style={{fontSize: '14px', color: '#4b5563'}}>Authorized Signature</div>
+              <div className="text-right mt-8 md:mt-12">
+                <div className="border-b border-gray-400 w-32 md:w-48 ml-auto mb-2"></div>
+                <div className="text-xs md:text-sm text-gray-600">Authorized Signature</div>
               </div>
             </div>
           </div>
