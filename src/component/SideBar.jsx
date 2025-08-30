@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
-import { Home, FileText, ShoppingCart, Package, AlertTriangle, LogOut, Users } from "lucide-react";
+import { Home, FileText, ShoppingCart, Package, AlertTriangle, LogOut } from "lucide-react";
 import { useAppContext } from "../context/AppContext"; // Apne context ka path adjust karna
 
 const SideBar = () => {
@@ -13,7 +13,6 @@ const SideBar = () => {
   
   // Define menu items based on role
   const allMenuItems = [
-    { name: "User Management", path: "/user", icon: <Users size={16} />, adminOnly: true },
     { name: "Dashboard", path: "/", icon: <Home size={16} />, adminOnly: true },
     { name: "Items List", path: "/items", icon: <Package size={16} />, adminOnly: false },
     { name: "Orders", path: "/orders", icon: <ShoppingCart size={16} />, adminOnly: false },
@@ -38,7 +37,7 @@ const SideBar = () => {
         {/* Title */}
         <div className="p-5 border-b border-gray-700">
           <h1 className="text-lg font-bold tracking-wide">
-            Surya Medical And Optical
+            {userRole === 1 ? "Surya Medical And Optical" : "Surya Medical And Optical Staff"}
           </h1>
         </div>
         
