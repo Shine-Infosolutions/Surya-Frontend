@@ -330,82 +330,86 @@ function EditOrder() {
           {form.items.map((it, idx) => (
             <div
               key={idx}
-              className="grid grid-cols-1 md:grid-cols-6 gap-3 mb-3 bg-gray-50 p-3 rounded-lg"
+              className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-3 bg-gray-50 p-3 rounded-lg"
             >
-              <Select
-                options={itemOptions}
-                value={itemOptions.find((opt) => opt.value === it.itemId) || null}
-                onChange={(selected) => updateItem(idx, "itemId", selected?.value)}
-                placeholder="Search Item..."
-                components={{ DropdownIndicator }}
-                className="w-full"
-                isSearchable
-                isClearable
-              />
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Item</label>
+                <Select
+                  options={itemOptions}
+                  value={itemOptions.find((opt) => opt.value === it.itemId) || null}
+                  onChange={(selected) => updateItem(idx, "itemId", selected?.value)}
+                  placeholder="Search Item..."
+                  components={{ DropdownIndicator }}
+                  className="w-full"
+                  isSearchable
+                  isClearable
+                />
+              </div>
 
-              <input
-                className="border rounded-lg p-2 bg-gray-100"
-                placeholder="Category"
-                value={categoryMap[it.category] || ""}
-                readOnly
-              />
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Unit</label>
+                <input
+                  className="border rounded-lg p-2 bg-gray-100 w-full"
+                  placeholder="Unit"
+                  value={it.unitType || ""}
+                  readOnly
+                />
+              </div>
 
-              <select
-                value={it.unitType}
-                onChange={(e) => updateItem(idx, "unitType", e.target.value)}
-                className="border rounded-lg p-2"
-              >
-                <option value="">Select Unit</option>
-                {Array.isArray(unitTypes) && unitTypes.map((unitType) => (
-                  <option key={unitType} value={unitType}>{unitType}</option>
-                ))}
-              </select>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Quantity</label>
+                <input
+                  type="number"
+                  min="1"
+                  className="border rounded-lg p-2 w-full"
+                  value={it.quantity}
+                  onChange={(e) =>
+                    updateItem(idx, "quantity", Number(e.target.value))
+                  }
+                />
+              </div>
 
-              <input
-                type="number"
-                min="1"
-                className="border rounded-lg p-2"
-                value={it.quantity}
-                onChange={(e) =>
-                  updateItem(idx, "quantity", Number(e.target.value))
-                }
-              />
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Price</label>
+                <input
+                  type="number"
+                  className="border rounded-lg p-2 w-full"
+                  placeholder="Enter unit price"
+                  value={it.unitPrice}
+                  onChange={(e) => updateItem(idx, "unitPrice", e.target.value)}
+                />
+              </div>
 
-              <input
-                type="number"
-                className="border rounded-lg p-2"
-                placeholder="Enter unit price"
-                value={it.unitPrice}
-                onChange={(e) => updateItem(idx, "unitPrice", e.target.value)}
-              />
-
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-green-600">
-                  ₹{it.totalPrice}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeItemRow(idx)}
-                  className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
-                  disabled={form.items.length === 1}
-                >
-                  Remove
-                </button>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Total</label>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-green-600">
+                    ₹{it.totalPrice}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeItemRow(idx)}
+                    className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
+                    disabled={form.items.length === 1}
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Totals */}
+        {/* Summary */}
         <div className="flex flex-col md:flex-row justify-end gap-6 pt-4 border-t">
-          <div className="text-gray-700">
+          <div>
             Subtotal: <b>₹{orderSubtotal}</b>
           </div>
-          <div className="text-gray-700">
+          <div>
             Discount ({form.discount}%): {" "}
             <b>-₹{Math.round((orderSubtotal * form.discount) / 100)}</b>
           </div>
-          <div className="text-gray-700">
+          <div>
             Tax ({form.tax}%): {" "}
             <b>
               +₹
@@ -416,7 +420,7 @@ function EditOrder() {
               )}
             </b>
           </div>
-          <div className="text-gray-900">
+          <div>
             Total: {" "}
             <b className="text-lg text-emerald-600">₹{orderTotal}</b>
           </div>

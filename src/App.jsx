@@ -9,6 +9,12 @@ import EditItemPage from "./pages/EditItemPage";
 import Login from "./pages/LogIn";
 import ProtectedRoute from "./component/ProtectedRoute";
 
+// Admin-only route protection
+const ProtectedAdminRoute = ({ children }) => {
+  const userRole = parseInt(localStorage.getItem("userRole")) || 2;
+  return userRole === 1 ? children : <Navigate to="/orders" replace />;
+};
+
 
 import SidebarLayout from "./component/SidebarLayout";
 import Orders from "./pages/Orders";
@@ -34,11 +40,11 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<ProtectedAdminRoute><Dashboard /></ProtectedAdminRoute>} />
           <Route path="/items" element={<ItemsList />} />
           <Route path="/items/add" element={<AddItemPage />} />
           <Route path="/items/edit/:id" element={<EditItemPage />} />
-          <Route path="/user" element={<UserManagement />} />
+          <Route path="/user" element={<ProtectedAdminRoute><UserManagement /></ProtectedAdminRoute>} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/create" element={<CreateOrder />} />
           <Route path="/orders/:orderId/invoice" element={<InvoiceViewer />} />

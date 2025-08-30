@@ -24,8 +24,14 @@ function Login() {
           // Set user in context (no token handling)
           if (typeof setUser === 'function') setUser(data.user);
           localStorage.setItem("user", JSON.stringify(data.user));
-          // Redirect to dashboard (sidebar)
-          navigate("/");
+          localStorage.setItem("userRole", data.user.role.toString());
+          
+          // Redirect based on role
+          if (data.user.role === 1) {
+            navigate("/"); // Admin - Dashboard
+          } else if (data.user.role === 2) {
+            navigate("/orders"); // Staff - Orders page
+          }
         } else {
           setError(data.message || "Login failed");
         }

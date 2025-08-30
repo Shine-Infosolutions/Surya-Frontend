@@ -1,10 +1,18 @@
 // Orders.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { toast } from 'react-toastify';
 import { useAppContext } from "../context/AppContext";
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState("Both");
+  const { axios, navigate } = useAppContext();
+
+  // Get user role
+  const userRole = parseInt(localStorage.getItem("userRole")) || 2;
+
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -12,43 +20,17 @@ export default function Orders() {
     hasNextPage: false,
     hasPrevPage: false,
   });
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState('Both');
-  const { axios, navigate } = useAppContext();
+  const pageSize = 25; // per page records
 
-  const fetchOrders = async (page = 1, searchQuery = "", category = "Both") => {
+  const fetchOrders = async () => {
     try {
       setLoading(true);
-      const params = { page, limit: 25 };
-      
-      if (searchQuery.trim()) {
-        params.customerName = searchQuery.trim();
-      }
-      
-      if (category !== 'Both') {
-        params.category = category === 'Surya Medical' ? 1 : 2;
-      }
-      
-      console.log('Fetching orders with params:', params);
-      const response = await axios.get("/api/paginate/Order", { params });
-      console.log('Orders API response:', response.data);
-      
-      // Handle different response structures
+      const response = await axios.get("/api/paginate/Order"); // fetch all orders only
       const ordersData = response.data.orders || response.data.data || [];
-      const paginationData = response.data.pagination || response.data.meta || {};
-      
       setOrders(ordersData);
-      setPagination({
-        currentPage: paginationData.currentPage || page,
-        totalPages: paginationData.totalPages || 1,
-        totalOrders: paginationData.total || ordersData.length,
-        hasNextPage: paginationData.hasNextPage || false,
-        hasPrevPage: paginationData.hasPrevPage || false,
-      });
     } catch (err) {
       console.error("Failed to fetch orders:", err);
-      toast.error('Failed to load orders');
+      toast.error("Failed to load orders");
       setOrders([]);
     } finally {
       setLoading(false);
@@ -60,74 +42,121 @@ export default function Orders() {
   };
 
   const handleDelete = async (orderId) => {
-    if (!window.confirm('Are you sure you want to delete this order?')) return;
+    if (!window.confirm("Are you sure you want to delete this order?")) return;
     try {
       await axios.delete(`/api/orders/${orderId}`);
-      fetchOrders(pagination.currentPage, search, categoryFilter);
-      toast.success('Order deleted successfully!');
+      fetchOrders();
+      toast.success("Order deleted successfully!");
     } catch (err) {
-      console.error('Delete error:', err);
-      toast.error('Failed to delete order');
+      console.error("Delete error:", err);
+      toast.error("Failed to delete order");
     }
   };
 
   useEffect(() => {
-    fetchOrders(1, search, categoryFilter);
+    fetchOrders();
   }, []);
 
-  // Search with debounce
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchOrders(1, search, categoryFilter);
-    }, 500);
+  // 🔥 Apply search + filter frontend me
+  const filteredOrders = useMemo(() => {
+    let filtered = [...orders];
 
-    return () => clearTimeout(timeoutId);
-  }, [search]);
+    // Filter by category
+    if (categoryFilter !== "Both") {
+      filtered = filtered.filter((order) => {
+        const categories = [...new Set(order.items?.map((item) => Number(item.category)) || [])];
+        if (categories.length === 0) return false;
+        if (categoryFilter === "Surya Medical") return categories.includes(1);
+        if (categoryFilter === "Surya Optical") return categories.includes(2);
+        return true;
+      });
+    }
+
+    // Search by name / phone / orderNumber
+    if (search.trim()) {
+      const lower = search.toLowerCase();
+      filtered = filtered.filter(
+        (order) =>
+          order.customerName?.toLowerCase().includes(lower) ||
+          order.customerPhone?.toLowerCase().includes(lower) ||
+          order.orderNumber?.toLowerCase().includes(lower) ||
+          order.invoiceNumber?.toLowerCase().includes(lower)
+      );
+    }
+
+    return filtered;
+  }, [orders, search, categoryFilter]);
+
+  // 🔥 Pagination frontend me
+  const paginatedOrders = useMemo(() => {
+    const total = filteredOrders.length;
+    const totalPages = Math.ceil(total / pageSize) || 1;
+    const start = (pagination.currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    const data = filteredOrders.slice(start, end);
+
+    setPagination((prev) => ({
+      ...prev,
+      totalOrders: total,
+      totalPages,
+      hasPrevPage: pagination.currentPage > 1,
+      hasNextPage: pagination.currentPage < totalPages,
+    }));
+
+    return data;
+  }, [filteredOrders, pagination.currentPage]);
 
   const paginate = (pageNumber) => {
-    fetchOrders(pageNumber, search, categoryFilter);
-  };
-
-  const handleCategoryChange = (category) => {
-    setCategoryFilter(category);
-    fetchOrders(1, search, category);
+    setPagination((prev) => ({ ...prev, currentPage: pageNumber }));
   };
 
   const getCategoryDisplay = (order) => {
-    if (!order.items || order.items.length === 0) return 'N/A';
-    
-    const categories = [...new Set(order.items.map(item => Number(item.category)))];
-    
+    if (!order.items || order.items.length === 0) return "N/A";
+
+    const categories = [...new Set(order.items.map((item) => Number(item.category)))];
+
     if (categories.length === 1) {
-      return categories[0] === 1 ? 'Surya Medical' : categories[0] === 2 ? 'Surya Optical' : 'N/A';
+      return categories[0] === 1
+        ? "Surya Medical"
+        : categories[0] === 2
+        ? "Surya Optical"
+        : "N/A";
     } else if (categories.length > 1) {
-      return 'Mixed';
+      return "Mixed";
     }
-    
-    return 'N/A';
+
+    return "N/A";
   };
 
   return (
     <div className="h-full overflow-auto p-6">
-      <h3 className="text-3xl font-bold mb-8 text-center text-indigo-700">Orders List</h3>
-      
+      <h3 className="text-3xl font-bold mb-8 text-center text-indigo-700">
+        Orders List
+      </h3>
+
       {/* Search Bar */}
       <div className="mb-6">
         <input
           type="text"
           placeholder="Search orders by customer name, phone, or order number..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPagination((p) => ({ ...p, currentPage: 1 }));
+          }}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
-      
+
       <div className="flex justify-between mb-6">
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-gray-700">Filter by:</label>
-          <select 
-            value={categoryFilter} 
-            onChange={(e) => handleCategoryChange(e.target.value)}
+          <select
+            value={categoryFilter}
+            onChange={(e) => {
+              setCategoryFilter(e.target.value);
+              setPagination((p) => ({ ...p, currentPage: 1 }));
+            }}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="Both">Both</option>
@@ -154,21 +183,39 @@ export default function Orders() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Bill</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Order #
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Customer
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Phone
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Category
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Total Bill
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Date
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Invoice
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {orders.map((order) => (
+            {paginatedOrders.map((order) => (
               <tr key={order._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {order.orderNumber}
+                  {order.invoiceNumber
+                    ? order.invoiceNumber.replace("INV-", "")
+                    : order.orderNumber || order._id}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {order.customerName}
@@ -183,7 +230,9 @@ export default function Orders() {
                   ₹{Number(order.totalAmount || 0).toFixed(2)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}
+                  {order.createdAt
+                    ? new Date(order.createdAt).toLocaleDateString()
+                    : "N/A"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <button
@@ -195,24 +244,26 @@ export default function Orders() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex gap-2">
-                    <button 
+                    <button
                       onClick={() => navigate(`/orders/edit/${order._id}`)}
                       className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
                     >
                       Edit
                     </button>
-                    <button 
-                      onClick={() => handleDelete(order._id)}
-                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                    >
-                      Delete
-                    </button>
+                    {userRole === 1 && (
+                      <button
+                        onClick={() => handleDelete(order._id)}
+                        className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
             ))}
 
-            {orders.length === 0 && !loading && (
+            {paginatedOrders.length === 0 && !loading && (
               <tr>
                 <td colSpan="8" className="px-6 py-4 text-center text-gray-500">
                   No orders found.
@@ -224,7 +275,7 @@ export default function Orders() {
       </div>
 
       {/* Pagination */}
-      {orders.length > 0 && (
+      {filteredOrders.length > 0 && (
         <div className="flex justify-center items-center mt-6 gap-2">
           <button
             onClick={() => pagination.hasPrevPage && paginate(pagination.currentPage - 1)}
@@ -234,7 +285,7 @@ export default function Orders() {
             Previous
           </button>
 
-          {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(page => (
+          {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((page) => (
             <button
               key={page}
               onClick={() => paginate(page)}
@@ -259,9 +310,9 @@ export default function Orders() {
       )}
 
       {/* Orders count */}
-      {orders.length > 0 && (
+      {filteredOrders.length > 0 && (
         <div className="text-center mt-4 text-sm text-gray-600">
-          Showing {orders.length} of {pagination.totalOrders} orders
+          Showing {paginatedOrders.length} of {filteredOrders.length} filtered orders
         </div>
       )}
     </div>
