@@ -94,9 +94,17 @@ function ItemsList() {
       }
     }
 
-  // Use backend-filtered items directly
+  // Apply stock filter to items
   const safeFilteredItems = Array.isArray(filteredItems) ? filteredItems : [];
-  const currentItems = safeFilteredItems;
+  const stockFilteredItems = safeFilteredItems.filter(item => {
+    if (stockFilter === 'in_stock') {
+      return (item.stock || 0) > 0;
+    } else if (stockFilter === 'out_of_stock') {
+      return (item.stock || 0) === 0;
+    }
+    return true; // 'all' - show all items
+  });
+  const currentItems = stockFilteredItems;
   // Get totalPages from backend response (will be set in fetchItems)
   const [totalPages, setTotalPages] = useState(1);
 
@@ -132,44 +140,43 @@ function ItemsList() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4">
-      <h3 className="text-3xl font-bold mb-8 text-center text-indigo-700">Items List</h3>
+    <div className="max-w-7xl mx-auto py-4 md:py-8 px-3 md:px-4">
+      <h3 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-center text-indigo-700">Items List</h3>
       
       {/* Search Bar */}
-      <div className="mb-6">
+      <div className="mb-4 md:mb-6">
         <input
           type="text"
           placeholder="Search items..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 md:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
         />
       </div>
       
-      <div className="flex justify-between mb-6">
-        <div className="flex items-center gap-4 print:hidden">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Sort by:</label>
-            <select 
-              value={sortBy} 
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="Both">Both</option>
-              <option value="2">Surya Opticals</option>
-              <option value="1">Surya Medicals</option>
-            </select>
-          </div>
+      <div className="flex flex-col sm:flex-row justify-between gap-4 mb-4 md:mb-6">
+        <div className="flex items-center gap-2 print:hidden">
+          <label className="text-xs md:text-sm font-medium text-gray-700">Sort by:</label>
+          <select 
+            value={sortBy} 
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-2 md:px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs md:text-sm"
+          >
+            <option value="Both">Both</option>
+            <option value="2">Surya Opticals</option>
+            <option value="1">Surya Medicals</option>
+          </select>
         </div>
         <button
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+          className="bg-blue-600 text-white px-4 md:px-6 py-2 rounded-lg hover:bg-blue-700 text-sm md:text-base"
           onClick={() => navigate('/items/add')}
         >
           Add Item
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      {/* Desktop Table */}
+      <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -195,7 +202,7 @@ function ItemsList() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {safeFilteredItems.length === 0 ? (
+            {stockFilteredItems.length === 0 ? (
               <tr>
                 <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
                   No items found.
@@ -233,35 +240,102 @@ function ItemsList() {
           </tbody>
         </table>
       </div>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-xs font-medium text-gray-700">Stock Filter:</span>
+          <select
+            value={stockFilter}
+            onChange={e => setStockFilter(e.target.value)}
+            className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+          >
+            <option value="all">All</option>
+            <option value="in_stock">In Stock</option>
+            <option value="out_of_stock">Out of Stock</option>
+          </select>
+        </div>
+        
+        {stockFilteredItems.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            No items found.
+          </div>
+        ) : (
+          currentItems.map((item, idx) => (
+            <div key={item._id || idx} className="bg-white rounded-lg shadow p-4">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900 text-sm">{item.name}</div>
+                  <div className="text-xs text-gray-500 mt-1">{getCategoryText(item.category)}</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold text-green-600 text-sm">₹{item.price}</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {item.stock === 0 ? (
+                      <span className="text-red-500 font-medium">Out of Stock</span>
+                    ) : (
+                      `Stock: ${item.stock}`
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mb-3">
+                <div className="text-xs text-gray-600">{item.description}</div>
+              </div>
+              
+              <div className="flex gap-2">
+                <button 
+                  className="flex-1 bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600 text-xs" 
+                  onClick={() => handleEditClick(item)}
+                >
+                  Edit
+                </button>
+                <button 
+                  className="flex-1 bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600 disabled:opacity-50 text-xs" 
+                  onClick={() => handleDelete(item._id)}
+                  disabled={deletingId === item._id}
+                >
+                  {deletingId === item._id ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
       
-      {safeFilteredItems.length > 0 && (
-        <div className="flex justify-center items-center mt-6 gap-2 print:hidden">
+      {stockFilteredItems.length > 0 && (
+        <div className="flex justify-center items-center mt-4 md:mt-6 gap-1 md:gap-2 print:hidden">
           <button
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-2 md:px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-sm"
           >
-            Previous
+            Prev
           </button>
           
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-            <button
-              key={page}
-              onClick={() => handlePageChange(page)}
-              className={`px-3 py-2 rounded ${
-                currentPage === page
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              {page}
-            </button>
-          ))}
+          {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+            const page = i + Math.max(1, currentPage - 2);
+            if (page > totalPages) return null;
+            return (
+              <button
+                key={page}
+                onClick={() => handlePageChange(page)}
+                className={`px-2 md:px-3 py-2 rounded text-xs md:text-sm ${
+                  currentPage === page
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {page}
+              </button>
+            );
+          })}
           
           <button
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-2 md:px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-sm"
           >
             Next
           </button>

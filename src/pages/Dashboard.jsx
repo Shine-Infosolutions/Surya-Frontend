@@ -209,20 +209,20 @@ const Dashboard = () => {
     };
 
     return (
-      <div className="bg-white p-6 rounded-lg shadow-lg">
+      <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg">
         <Bar data={chartData} options={options} />
       </div>
     );
   };
 
   const StatCard = ({ title, value, icon, color = 'text-blue-600' }) => (
-    <div className="bg-white p-6 rounded-lg shadow-lg">
+    <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-gray-600 text-sm">{title}</p>
-          <p className={`text-2xl font-bold ${color}`}>{value}</p>
+          <p className="text-gray-600 text-xs md:text-sm">{title}</p>
+          <p className={`text-lg md:text-2xl font-bold ${color}`}>{value}</p>
         </div>
-        <div className={`text-3xl ${color}`}>{icon}</div>
+        <div className={`text-2xl md:text-3xl ${color}`}>{icon}</div>
       </div>
     </div>
   );
@@ -232,16 +232,16 @@ const Dashboard = () => {
   // }
 
   return (
-    <div className="p-6 space-y-6">
-      <h2 className="text-3xl font-bold text-gray-800">Dashboard</h2>
+    <div className="p-3 md:p-6 space-y-4 md:space-y-6">
+      <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Dashboard</h2>
       
       {/* Category Toggle */}
-      <div className="flex justify-center mb-6">
-        <div className="bg-white rounded-lg p-1 shadow-lg">
-          <div className="flex">
+      <div className="flex justify-center mb-4 md:mb-6">
+        <div className="bg-white rounded-lg p-1 shadow-lg w-full max-w-md">
+          <div className="flex flex-col sm:flex-row">
             <button
               onClick={() => setShowCategory('both')}
-              className={`px-4 py-2 rounded-md transition-colors ${
+              className={`px-3 md:px-4 py-2 rounded-md transition-colors text-sm md:text-base ${
                 showCategory === 'both'
                   ? 'bg-blue-600 text-white'
                   : 'text-gray-600 hover:text-blue-600'
@@ -251,30 +251,30 @@ const Dashboard = () => {
             </button>
             <button
               onClick={() => setShowCategory('medical')}
-              className={`px-4 py-2 rounded-md transition-colors ${
+              className={`px-3 md:px-4 py-2 rounded-md transition-colors text-sm md:text-base ${
                 showCategory === 'medical'
                   ? 'bg-blue-600 text-white'
                   : 'text-gray-600 hover:text-blue-600'
               }`}
             >
-              🏥 Surya Medical
+              🏥 Medical
             </button>
             <button
               onClick={() => setShowCategory('optical')}
-              className={`px-4 py-2 rounded-md transition-colors ${
+              className={`px-3 md:px-4 py-2 rounded-md transition-colors text-sm md:text-base ${
                 showCategory === 'optical'
                   ? 'bg-blue-600 text-white'
                   : 'text-gray-600 hover:text-blue-600'
               }`}
             >
-              👓 Surya Optical
+              👓 Optical
             </button>
           </div>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <StatCard 
           title="Total Orders" 
           value={dashboardData.totalOrders.toLocaleString()} 
@@ -302,14 +302,14 @@ const Dashboard = () => {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-lg">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Monthly Orders</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+            <h3 className="text-base md:text-lg font-semibold">Monthly Orders</h3>
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="px-2 md:px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm md:text-base"
             >
               {[2020, 2021, 2022, 2023, 2024, 2025].map(year => (
                 <option key={year} value={year}>{year}</option>
