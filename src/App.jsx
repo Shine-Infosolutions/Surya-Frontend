@@ -2,7 +2,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Dashboard from "./pages/Dashboard";
-import UserManagement from "./pages/UserManagement";
 import ItemsList from "./pages/ItemsList";
 import AddItemPage from "./pages/AddItemPage";
 import EditItemPage from "./pages/EditItemPage";
@@ -44,7 +43,7 @@ export default function App() {
           <Route path="/items" element={<ItemsList />} />
           <Route path="/items/add" element={<AddItemPage />} />
           <Route path="/items/edit/:id" element={<EditItemPage />} />
-          <Route path="/user" element={<ProtectedAdminRoute><UserManagement /></ProtectedAdminRoute>} />
+
           <Route path="/orders" element={<Orders />} />
           <Route path="/orders/create" element={<CreateOrder />} />
           <Route path="/orders/:orderId/invoice" element={<InvoiceViewer />} />

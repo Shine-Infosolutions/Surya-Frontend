@@ -129,7 +129,7 @@ function EditOrder() {
         updated.itemName = item.name;
         updated.unitPrice = item.price || 0;
         updated.category = Number(item.category);
-        updated.unitType = unitTypes.length > 0 ? unitTypes[0] : "piece";
+        updated.unitType = item.unitType || "";
       }
     }
 
@@ -149,7 +149,7 @@ function EditOrder() {
           quantity: 1,
           unitPrice: 0,
           totalPrice: 0,
-          unitType: unitTypes.length > 0 ? unitTypes[0] : "piece",
+          unitType: "",
         },
       ],
     }));
